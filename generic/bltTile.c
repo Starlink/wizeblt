@@ -736,9 +736,7 @@ Blt_SetTileOrigin(
     int x, int y)
 {
     while (!Tk_IsTopLevel(tkwin)) {
-#ifdef Tk_IsBgTileTop
         if (Tk_IsBgTileTop(tkwin)) break;
-#endif
 	x += Tk_X(tkwin) + Tk_Changes(tkwin)->border_width;
 	y += Tk_Y(tkwin) + Tk_Changes(tkwin)->border_width;
 	tkwin = Tk_Parent(tkwin);

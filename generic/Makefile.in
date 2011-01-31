@@ -257,7 +257,7 @@ xref:
 
 clean:
 	$(RM) $(OBJS) bltInit.o $(lib_a) $(tcl_only_lib_a) \
-		$(bltsh)* $(bltwish)* *pure* .pure*
+		$(bltsh)* $(bltwish)*
 	(cd shared; $(MAKE) clean) 
 
 distclean: clean
@@ -266,11 +266,6 @@ distclean: clean
 
 .c.o:
 	$(CC) -c $(CC_SWITCHES) $<
-
-PUREFLAGS=
-pure: $(lib_a)
-	$(PURIFYHOME)/purify $(PUREFLAGS) $(CC) $(CC_SWITCHES) \
-		$(srcdir)/bltUnixMain.c -o bltwish $(lib_a) $(LIBS)
 
 QUANTIFYFLAGS=
 quant: $(lib_a)

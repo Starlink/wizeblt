@@ -238,6 +238,9 @@ static Blt_ConfigSpec columnSpecs[] =
     {BLT_CONFIG_STRING, "-sortcommand", "sortCommand", "SortCommand",
 	DEF_SORT_COMMAND, Blt_Offset(TreeViewColumn, sortCmd), 
 	BLT_CONFIG_NULL_OK}, 
+    {BLT_CONFIG_LISTOBJ, "-sortaltcolumns", "sortAltColumns", "SortAltColumns",
+	DEF_SORT_COMMAND, Blt_Offset(TreeViewColumn, sortAltColumns), 
+	BLT_CONFIG_NULL_OK}, 
     {BLT_CONFIG_CUSTOM, "-sortmode", "sortMode", "SortMode",
 	DEF_SORT_TYPE, Blt_Offset(TreeViewColumn, sortType), 0, &typeOption},
     {BLT_CONFIG_STATE, "-state", "state", "State",
@@ -1362,8 +1365,8 @@ Blt_TreeViewNearestColumn(tvPtr, x, y, contextPtr)
 		if (contextPtr != NULL) {
 		    *contextPtr = NULL;
 		    if ((tvPtr->flags & TV_SHOW_COLUMN_TITLES) && 
-			(y >= tvPtr->inset) &&
-			(y < (tvPtr->titleHeight + tvPtr->inset))) {
+			(y >= tvPtr->insetY) &&
+			(y < (tvPtr->titleHeight + tvPtr->insetY))) {
 			*contextPtr = (x >= (right - RULE_AREA)) 
 			    ? ITEM_COLUMN_RULE : ITEM_COLUMN_TITLE;
 		    } 
@@ -1554,6 +1557,34 @@ ColumnConfigureOp(tvPtr, interp, objc, objv)
          if (isdel) {
              return TCL_ERROR;
          }
+         if (columnPtr->sortAltColumns != NULL) {
+             
+             Tcl_Obj **sobjv;
+             int sobjc, n;
+             TreeViewColumn *acPtr;
+    
+             if (Tcl_ListObjGetElements(interp, columnPtr->sortAltColumns,
+                 &sobjc, &sobjv) != TCL_OK) {
+                     Tcl_DecrRefCount(columnPtr->sortAltColumns);
+                     columnPtr->sortAltColumns = NULL;
+                     return TCL_ERROR;
+             }
+             for (n = 0; n < sobjc; n++) {
+
+                 if (Blt_TreeViewGetColumn(interp, tvPtr, sobjv[n], &acPtr)
+                     != TCL_OK || acPtr == columnPtr || acPtr == &tvPtr->treeColumn) {
+                     if (acPtr == columnPtr) {
+                         Tcl_AppendResult(interp, "self reference", 0);
+                     }
+                     if (acPtr == &tvPtr->treeColumn) {
+                         Tcl_AppendResult(interp, "tree column not valid", 0);
+                     }
+                     Tcl_DecrRefCount(columnPtr->sortAltColumns);
+                     columnPtr->sortAltColumns = NULL;
+                     return TCL_ERROR;
+                 }
+             }
+        }
          if (columnPtr->stylePtr == NULL && oldStyle) {
              TreeViewStyle *stylePtr = NULL;
              
@@ -2359,6 +2390,9 @@ ColumnBboxOp(tvPtr, interp, objc, objv)
     TreeViewEntry *entryPtr = NULL;
     int x, y, w, h, visible = 0;
     const char *string;
+    int mw, mh;
+    mw = Tk_Width(tvPtr->tkwin) - tvPtr->padX;
+    mh = Tk_Height(tvPtr->tkwin) - tvPtr->padY;
     
     if (objc == 6) {
         string = Tcl_GetString(objv[3]);
@@ -2391,15 +2425,15 @@ ColumnBboxOp(tvPtr, interp, objc, objv)
         if (!(tvPtr->flags & TV_SHOW_COLUMN_TITLES)) return TCL_OK;
         listPtr = Tcl_NewListObj(0,0);
         x = SCREENX(tvPtr, colPtr->worldX);
-        y = (tvPtr->yOffset + tvPtr->inset);
+        y = (tvPtr->yOffset + tvPtr->insetY);
         w = colPtr->width;
         h = tvPtr->titleHeight;
         if (visible) {
-            if ((x+w) > Tk_Width(tvPtr->tkwin)) {
-                w = (Tk_Width(tvPtr->tkwin)-x-2);
+            if ((x+w) > mw) {
+                w = (mw-x-2);
             }
-            if ((y+h) > Tk_Height(tvPtr->tkwin)) {
-                w = (Tk_Height(tvPtr->tkwin)-y-2);
+            if ((y+h) > mh) {
+                w = (mh-y-2);
             }
         }
         Tcl_ListObjAppendElement(interp, listPtr, Tcl_NewIntObj(x));
@@ -2418,11 +2452,11 @@ ColumnBboxOp(tvPtr, interp, objc, objv)
     w = colPtr->width;
     h = entryPtr->height;
     if (visible) {
-        if ((x+w) > Tk_Width(tvPtr->tkwin)) {
-            w = (Tk_Width(tvPtr->tkwin)-x-2);
+        if ((x+w) > mw) {
+            w = (mw-x-2);
         }
-        if ((y+h) > Tk_Height(tvPtr->tkwin)) {
-            w = (Tk_Height(tvPtr->tkwin)-y-2);
+        if ((y+h) > mh) {
+            w = (mh-y-2);
         }
     }
     Tcl_ListObjAppendElement(interp, listPtr, Tcl_NewIntObj(x));
@@ -2826,23 +2860,43 @@ InvokeCompare(tvPtr, e1Ptr, e2Ptr, command)
 static TreeView *treeViewInstance;
 
 static int
-CompareEntries(a, b)
-    CONST void *a, *b;
+CompareEntry( CONST void *a, CONST void *b, Tcl_Obj *colName)
 {
     TreeView *tvPtr;
-    TreeViewEntry **e1PtrPtr = (TreeViewEntry **)a;
-    TreeViewEntry **e2PtrPtr = (TreeViewEntry **)b;
+    TreeViewColumn *columnPtr;
+    TreeViewEntry *e1Ptr, **e1PtrPtr = (TreeViewEntry **)a;
+    TreeViewEntry *e2Ptr, **e2PtrPtr = (TreeViewEntry **)b;
     Tcl_Obj *obj1, *obj2;
     char *s1, *s2;
-    int result;
+    int result, sType;
 
     tvPtr = (*e1PtrPtr)->tvPtr;
+    columnPtr = tvPtr->sortColumnPtr;
+    sType = tvPtr->sortType;
+    
     obj1 = (*e1PtrPtr)->dataObjPtr;
     obj2 = (*e2PtrPtr)->dataObjPtr;
+    if (colName != NULL) {
+        if (Blt_TreeViewGetColumn(NULL, tvPtr, colName, &columnPtr)
+            != TCL_OK) {
+            return 1;
+        }
+        e1Ptr = *e1PtrPtr;
+        e2Ptr = *e2PtrPtr;
+        if (Blt_TreeGetValueByKey(tvPtr->interp, tvPtr->tree,
+            e1Ptr->node, columnPtr->key, &obj1) != TCL_OK) {
+            return 1;
+        }
+        if (Blt_TreeGetValueByKey(tvPtr->interp, tvPtr->tree,
+            e2Ptr->node, columnPtr->key, &obj2) != TCL_OK) {
+                return 1;
+        }
+        sType = columnPtr->sortType;
+    }
     s1 = Tcl_GetString(obj1);
     s2 = Tcl_GetString(obj2);
     result = 0;
-    switch (tvPtr->sortType) {
+    switch (sType) {
     case SORT_TYPE_ASCII:
 	result = strcmp(s1, s2);
 	break;
@@ -2851,7 +2905,7 @@ CompareEntries(a, b)
 	{
 	    char *cmd;
 
-	    cmd = tvPtr->sortColumnPtr->sortCmd;
+	    cmd = columnPtr->sortCmd;
 	    if (cmd == NULL) {
 		cmd = tvPtr->sortCmd;
 	    }
@@ -2909,6 +2963,33 @@ CompareEntries(a, b)
     return result;
 }
 
+static int
+CompareEntries(a, b)
+    CONST void *a, *b;
+{
+    TreeView *tvPtr;
+    int result, i;
+    TreeViewEntry **e1PtrPtr = (TreeViewEntry **)a;
+    int objc;
+    Tcl_Obj **objv;
+    
+    result = CompareEntry(a, b, NULL);
+    
+    tvPtr = (*e1PtrPtr)->tvPtr;
+    if (result != 0) { return result; }
+    if (result != 0 || tvPtr->sortColumnPtr == NULL) return result;
+    if (tvPtr->sortColumnPtr->sortAltColumns == NULL) return result;
+		
+    if (Tcl_ListObjGetElements(NULL, tvPtr->sortColumnPtr->sortAltColumns,
+        &objc, &objv) != TCL_OK) {
+            return result;
+    }
+    for (i = 0; i < objc && result == 0; i++) {
+        result = CompareEntry(a, b, objv[i]);
+    }
+    
+    return result;
+}
 
 /*
  *----------------------------------------------------------------------
@@ -2924,20 +3005,21 @@ CompareEntries(a, b)
  *----------------------------------------------------------------------
  */
 static int
-CompareNodes(n1Ptr, n2Ptr)
-    Blt_TreeNode *n1Ptr, *n2Ptr;
+CompareNodes( Blt_TreeNode *n1Ptr, Blt_TreeNode *n2Ptr )
 {
     TreeView *tvPtr = treeViewInstance;
     TreeViewEntry *e1Ptr, *e2Ptr;
-
+    
     e1Ptr = Blt_NodeToEntry(tvPtr, *n1Ptr);
     e2Ptr = Blt_NodeToEntry(tvPtr, *n2Ptr);
+
+    TreeViewColumn *columnPtr = tvPtr->sortColumnPtr;
 
     /* Fetch the data for sorting. */
     if (tvPtr->sortType == SORT_TYPE_COMMAND) {
 	e1Ptr->dataObjPtr = Tcl_NewIntObj(Blt_TreeNodeId(*n1Ptr));
 	e2Ptr->dataObjPtr = Tcl_NewIntObj(Blt_TreeNodeId(*n2Ptr));
-    } else if (tvPtr->sortColumnPtr == &tvPtr->treeColumn) {
+    } else if (columnPtr == &tvPtr->treeColumn) {
 	Tcl_DString dString;
 
 	Tcl_DStringInit(&dString);
@@ -2956,7 +3038,7 @@ CompareNodes(n1Ptr, n2Ptr)
 	Blt_TreeKey key;
 	Tcl_Obj *objPtr;
 
-	key = tvPtr->sortColumnPtr->key;
+	key = columnPtr->key;
 	if (Blt_TreeViewGetData(e1Ptr, key, &objPtr) != TCL_OK) {
 	    e1Ptr->dataObjPtr = Tcl_NewStringObj("",-1);
 	} else {
@@ -3297,6 +3379,7 @@ Blt_TreeViewSortFlatView(tvPtr)
     /* Free all the Tcl_Objs used for comparison data. */
     for(p = tvPtr->flatArr; *p != NULL; p++) {
 	Tcl_DecrRefCount((*p)->dataObjPtr);
+         (*p)->dataObjPtr = NULL;
     }
     tvPtr->viewIsDecreasing = tvPtr->sortDecreasing;
     tvPtr->flags |= TV_SORTED;

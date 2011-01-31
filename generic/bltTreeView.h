@@ -81,15 +81,15 @@ typedef char *UID;
 #define TOGGLE(x, mask) (((x) & (mask)) ? ((x) & ~(mask)) : ((x) | (mask)))
 
 
-#define SCREENX(h, wx)	((wx) - (h)->xOffset + (h)->inset)
-#define SCREENY(h, wy)	((wy) - (h)->yOffset + (h)->inset + (h)->titleHeight)
+#define SCREENX(h, wx)	((wx) - (h)->xOffset + (h)->insetX)
+#define SCREENY(h, wy)	((wy) - (h)->yOffset + (h)->insetY + (h)->titleHeight)
 
-#define WORLDX(h, sx)	((sx) - (h)->inset + (h)->xOffset)
-#define WORLDY(h, sy)	((sy) - ((h)->inset + (h)->titleHeight) + (h)->yOffset)
+#define WORLDX(h, sx)	((sx) - (h)->insetX + (h)->xOffset)
+#define WORLDY(h, sy)	((sy) - ((h)->insetY + (h)->titleHeight) + (h)->yOffset)
 
-#define VPORTWIDTH(h)	(Tk_Width((h)->tkwin) - 2 * (h)->inset)
+#define VPORTWIDTH(h)	(Tk_Width((h)->tkwin) - 2 * (h)->insetX)
 #define VPORTHEIGHT(h) \
-	(Tk_Height((h)->tkwin) - (h)->titleHeight - 2 * (h)->inset)
+	(Tk_Height((h)->tkwin) - (h)->titleHeight - 2 * (h)->insetY)
 
 #define ICONWIDTH(d)	(tvPtr->levelInfo[(d)].iconWidth)
 #define LEVELX(d)	(tvPtr->levelInfo[(d)].x)
@@ -319,8 +319,8 @@ typedef struct TreeViewStruct TreeView;
 typedef struct TreeViewStyleClassStruct TreeViewStyleClass;
 typedef struct TreeViewStyleStruct TreeViewStyle;
 
-typedef int (TreeViewCompareProc) _ANSI_ARGS_((Tcl_Interp *interp, char *name,
-	char *pattern, int nocase));
+typedef int (TreeViewCompareProc) _ANSI_ARGS_((Tcl_Interp *interp,
+        char  *name, Tcl_Obj *pattern, int nocase));
 
 typedef TreeViewEntry *(TreeViewIterProc) _ANSI_ARGS_((TreeViewEntry *entryPtr,
 	unsigned int mask));
@@ -509,6 +509,7 @@ struct TreeViewColumnStruct {
     Tcl_Obj *colorPats;  /* List of string match pattern/attribute pairs */
     Tcl_Obj *colorRegex;  /* List of regex pattern/attribute pairs */
     Tcl_Obj *formatCmd;
+    Tcl_Obj *sortAltColumns;
 };
 
 
@@ -797,7 +798,7 @@ struct TreeViewStruct {
 
     unsigned int flags;		/* For bitfield definitions, see below */
 
-    int inset;			/* Total width of all borders,
+    int insetX, insetY;			/* Total width of all borders,
 				 * including traversal highlight and
 				 * 3-D border.  Indicates how much
 				 * interior stuff must be offset from
@@ -1088,6 +1089,7 @@ struct TreeViewStruct {
     Tcl_Obj *formatCmd;
     Tk_OptionTable buttonOptions;
     int noScroll;
+    int padX, padY;
 };
 
 

@@ -92,7 +92,6 @@ MSVCRT        =
 #   -w-pro	Call to function with no prototype
 #   -w-par	Parameter is never used.
 #   -w-sus 	Suspicious pointer conversion (bltCanvEps.c).
-#   -w-eff	Code has no effect (pure_api.c).
 #
 WARNINGS      =	-w-pro -w-par -w-eff -w-sus 
 
@@ -198,8 +197,8 @@ TCL_ONLY_OBJS =	bltAlloc.obj \
 		bltWatch.obj  \
 		bltWinPipe.obj \
 		bltWinUtil.obj \
-		bltWinDde.obj \
-		pure_api.obj
+		bltWinDde.obj
+
 
 DEMO_OBJS     =	tkConsole.obj bltWinMain.obj
 

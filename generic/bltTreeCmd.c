@@ -278,9 +278,10 @@ static Blt_SwitchSpec insertSwitches[] =
 
 #define PATTERN_EXACT	(1)
 #define PATTERN_GLOB	(2)
-#define PATTERN_MASK	(0x3)
+#define PATTERN_MASK	(0x7)
 #define PATTERN_NONE	(0)
 #define PATTERN_REGEXP	(3)
+#define PATTERN_INLIST	(4)
 #define MATCH_INVERT		(1<<8)
 #define MATCH_LEAFONLY		(1<<4)
 #define MATCH_NOCASE		(1<<5)
@@ -323,6 +324,8 @@ typedef struct {
     char *addTag;		/* If non-NULL, tag added to selected nodes. */
 
     char **command;		/* Command split into a Tcl list. */
+    char **cmdArgs;
+    int argc;
     char *eval;		/* Command to eval with %T and %N substitutions. */
 
     Blt_List keyList;		/* List of key name patterns. */
@@ -330,7 +333,8 @@ typedef struct {
     Tcl_Obj *withoutTag;
     char *retKey;
     Blt_TreeNode startNode;
-    char *name, *subKey;
+    Tcl_Obj *name;
+    char *subKey;
     Tcl_RegExp *regPtr;
     Tcl_Obj *execVar, *execObj, *nodesObj;
     int keyCount, iskey;
@@ -369,6 +373,7 @@ static Blt_SwitchSpec findSwitches[] =
 {
     {BLT_SWITCH_STRING, "-addtag", Blt_Offset(FindData, addTag), 0},
     {BLT_SWITCH_STRING, "-column", Blt_Offset(FindData, subKey), 0},
+    {BLT_SWITCH_LIST, "-cmdargs", Blt_Offset(FindData, cmdArgs), 0},
     {BLT_SWITCH_LIST, "-command", Blt_Offset(FindData, command), 0},
     {BLT_SWITCH_FLAG, "-count", Blt_Offset(FindData, flags), 0, 0,
        MATCH_COUNT},
@@ -409,7 +414,7 @@ static Blt_SwitchSpec findSwitches[] =
     {BLT_SWITCH_INT_NONNEGATIVE, "-limit", Blt_Offset(FindData, maxMatches), 0},
     {BLT_SWITCH_INT_NONNEGATIVE, "-maxdepth", Blt_Offset(FindData, maxDepth), 0},
     {BLT_SWITCH_INT_NONNEGATIVE, "-mindepth", Blt_Offset(FindData, minDepth), 0},
-    {BLT_SWITCH_STRING, "-name", Blt_Offset(FindData, name), 0},
+    {BLT_SWITCH_OBJ, "-name", Blt_Offset(FindData, name), 0},
     {BLT_SWITCH_FLAG, "-nocase", Blt_Offset(FindData, flags), 0, 0, 
 	MATCH_NOCASE},
     {BLT_SWITCH_OBJ, "-nodes", Blt_Offset(FindData, nodesObj), 0},
@@ -420,6 +425,8 @@ static Blt_SwitchSpec findSwitches[] =
 	&regexpSwitch}, */
     {BLT_SWITCH_FLAG, "-regexp", Blt_Offset(FindData, flags), 0, 0, 
 	PATTERN_REGEXP},
+    {BLT_SWITCH_FLAG, "-inlist", Blt_Offset(FindData, flags), 0, 0, 
+	PATTERN_INLIST},
     {BLT_SWITCH_FLAG, "-reldepth", Blt_Offset(FindData, flags), 0, 0, 
 	MATCH_RELDEPTH},
     {BLT_SWITCH_STRING, "-return", Blt_Offset(FindData, retKey), 0},
@@ -2228,11 +2235,13 @@ ComparePattern(FindData *findData, char *string)
 {
     int result, type, nocase;
     char *pattern;
+    int objc, i;
+    Tcl_Obj **objv, *obj;
 
     nocase = (findData->flags & MATCH_NOCASE);
     result = FALSE;
     type = (findData->flags & PATTERN_MASK);
-    pattern = findData->name;
+    pattern = Tcl_GetString(findData->name);
     switch (type) {
         case 0:
 	case PATTERN_EXACT:
@@ -2252,10 +2261,30 @@ ComparePattern(FindData *findData, char *string)
                 string = Blt_Strdup(string);
                 strtolower(string);
             }
-	    result = (Tcl_RegExpMatch((Tcl_Interp *)NULL, string, pattern) == 1); 
+            obj = Tcl_NewStringObj(string, -1);
+	    result = (Tcl_RegExpMatchObj((Tcl_Interp *)NULL, obj, findData->name) == 1); 
+	    Tcl_DecrRefCount(obj);
             if (nocase) {
 	       Blt_Free(string);
             }
+	    break;
+	case PATTERN_INLIST:
+            if (Tcl_ListObjGetElements(NULL, findData->name, &objc, &objv) != TCL_OK) {
+                return 1;
+            }
+            for (i = 0; i < objc; i++) {
+                pattern = Tcl_GetString(objv[i]);
+                if (!nocase) {
+                    if (strcmp(string, pattern) == 0) {
+                        return 1;
+                    }
+                } else {
+                    if (strcasecmp(string, pattern) == 0) {
+                        return 1;
+                    }
+                }
+            }
+            
 	    break;
     }
     return result;
@@ -2425,6 +2454,8 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
     int result, invert, cntf;
     unsigned int inode;
     int strict, isnull;
+    char *curValue = NULL;
+    Tcl_Obj *curObj = NULL, *resObjPtr = NULL;
     
     isnull = ((dataPtr->flags&MATCH_ISNULL) != 0);
     strict = ((dataPtr->flags&MATCH_STRICT) != 0);
@@ -2480,19 +2511,17 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
     Tcl_DStringInit(&dString);
     inode = node->inode;
     if (dataPtr->subKey != NULL) {
-        char *string;
-        Tcl_Obj *sobjPtr = NULL;
         int empty;
         
-        empty = (Blt_TreeGetValue(interp, cmdPtr->tree, node, dataPtr->subKey, &sobjPtr)
+        empty = (Blt_TreeGetValue(interp, cmdPtr->tree, node, dataPtr->subKey, &curObj)
             == TCL_OK);
         if (empty == isnull) {
             Tcl_DStringFree(&dString);
             return TCL_OK;
         }
-        if (sobjPtr != NULL && dataPtr->name) {
-            string = (sobjPtr == NULL) ? "" : Tcl_GetString(sobjPtr);
-            result = ComparePattern(dataPtr, string);
+        if (curObj != NULL && dataPtr->name) {
+            curValue = (curObj == NULL) ? "" : Tcl_GetString(curObj);
+            result = ComparePattern(dataPtr, curValue);
         }
     } else if (dataPtr->keyList != NULL) {
 	Blt_TreeKey key;
@@ -2501,9 +2530,8 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
 	result = FALSE;		/* It's false if no keys match. */
 	for (key = Blt_TreeFirstKey(cmdPtr->tree, node, &cursor);
 	    key != NULL; key = Blt_TreeNextKey(cmdPtr->tree, &cursor)) {
-            Tcl_Obj *sobjPtr;
              
-            sobjPtr = NULL;
+            curObj = NULL;
 	    result = ComparePatternList(dataPtr->keyList, key, 0);
 	    if (!result) {
 		continue;
@@ -2513,9 +2541,9 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
                 int res;
                 
                 res = TCL_ERROR;
-                if (Blt_TreeGetValue(interp, cmdPtr->tree, node, key, &sobjPtr)
+                if (Blt_TreeGetValue(interp, cmdPtr->tree, node, key, &curObj)
                     == TCL_OK) {
-                    res = Blt_GetArrayFromObj(NULL, sobjPtr, &tablePtr);
+                    res = Blt_GetArrayFromObj(NULL, curObj, &tablePtr);
                 }
                 if (Blt_TreeNodeDeleted(node) || node->inode != inode) {
                     Tcl_DStringFree(&dString);
@@ -2527,14 +2555,13 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
                 }
             }
 	    if (dataPtr->name != NULL) {
-		char *string;
 
-		if (Blt_TreeGetValue(interp, cmdPtr->tree, node, key, &sobjPtr) != TCL_OK) {
+		if (Blt_TreeGetValue(interp, cmdPtr->tree, node, key, &curObj) != TCL_OK) {
                     Tcl_DStringFree(&dString);
                     return TCL_ERROR;
                 }
-		string = (sobjPtr == NULL) ? "" : Tcl_GetString(sobjPtr);
-		result = ComparePattern(dataPtr, string);
+		curValue = (curObj == NULL) ? "" : Tcl_GetString(curObj);
+		result = ComparePattern(dataPtr, curValue);
 		if (!result) {
 		    continue;
 		}
@@ -2542,15 +2569,14 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
 	    break;
 	}
     } else if (dataPtr->name != NULL) {	    
-	char *string;
 
 	if (dataPtr->flags & MATCH_PATHNAME) {
-	    string = GetNodePath(cmdPtr, Blt_TreeRootNode(cmdPtr->tree),
+	    curValue = GetNodePath(cmdPtr, Blt_TreeRootNode(cmdPtr->tree),
 		 node, FALSE, &dString);
 	} else {
-	    string = Blt_TreeNodeLabel(node);
+	    curValue = Blt_TreeNodeLabel(node);
 	}
-	result = ComparePattern(dataPtr, string);
+	result = ComparePattern(dataPtr, curValue);
     }
     Tcl_DStringFree(&dString);
 
@@ -2595,7 +2621,7 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
                 return result;
             }
             if (result == TCL_OK && cntf == 0) {
-                Tcl_ListObjAppendElement(interp, dataPtr->listObjPtr, Tcl_GetObjResult(interp));
+                resObjPtr =  Tcl_GetObjResult(interp);
             } else {
                 return TCL_OK;
             }
@@ -2632,28 +2658,58 @@ MatchNodeProc(Blt_TreeNode node, ClientData clientData, int order)
                 objPtr = Tcl_NewIntObj(Blt_TreeNodeId(node));
             }
             if (!cntf) {
-                Tcl_ListObjAppendElement(interp, dataPtr->listObjPtr, objPtr);
+                resObjPtr = objPtr;
             }
         }
 	if (dataPtr->objv != NULL) {
+	    int ai;
+	    char **p;
             objPtr = Tcl_NewIntObj(Blt_TreeNodeId(node));
-	    dataPtr->objv[dataPtr->objc - 1] = objPtr;
-	    Tcl_IncrRefCount(objPtr);
-	    result = Tcl_EvalObjv(interp, dataPtr->objc, dataPtr->objv, 0);
-	    Tcl_DecrRefCount(objPtr);
-	    dataPtr->objv[dataPtr->objc - 1] = NULL;
+            Tcl_DecrRefCount(dataPtr->objv[dataPtr->objc - 1]);
+            Tcl_IncrRefCount(objPtr);
+            dataPtr->objv[dataPtr->objc - 1] = objPtr;
+            p = dataPtr->cmdArgs;
+            for (ai = 0; ai < dataPtr->argc && *p != NULL; ai++, p++) {
+                if (Blt_TreeGetValue(interp, cmdPtr->tree, node, *p, &objPtr) != TCL_OK) {
+                    objPtr = Tcl_NewStringObj("", -1);
+                }
+                Tcl_DecrRefCount(dataPtr->objv[dataPtr->objc + ai]);
+                Tcl_IncrRefCount(objPtr);
+                dataPtr->objv[dataPtr->objc + ai] = objPtr;
+            }
+	    result = Tcl_EvalObjv(interp, dataPtr->objc + dataPtr->argc, dataPtr->objv, 0);
             if (cmdPtr->delete) {
                 return TCL_ERROR;
             }
+            if (result == TCL_RETURN) {
+                int eRes;
+                if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp),
+                    &eRes) != TCL_OK) {
+                    return TCL_ERROR;
+                }
+                result = TCL_OK;
+                if (eRes == 0) {
+                    resObjPtr = NULL;
+                } else if (cntf) {
+                    goto finishNode;
+                }
+            } else {
+                resObjPtr = NULL;
+            }
+            
 	    if (result != TCL_OK) {
 		return result;
 	    }
 	}
-	dataPtr->nMatches++;
-	if ((dataPtr->maxMatches > 0) && 
-	    (dataPtr->nMatches >= dataPtr->maxMatches)) {
-	    return TCL_BREAK;
-	}
+	if (resObjPtr != NULL) {
+            Tcl_ListObjAppendElement(interp, dataPtr->listObjPtr, resObjPtr);
+            finishNode:
+            dataPtr->nMatches++;
+            if ((dataPtr->maxMatches > 0) && 
+            (dataPtr->nMatches >= dataPtr->maxMatches)) {
+                return TCL_BREAK;
+            }
+        }
     }
     return TCL_OK;
 }
@@ -3954,6 +4010,7 @@ FindOp(
              goto done;
          }
     }
+
     if (data.flags & MATCH_RELDEPTH) {
         int dep;
         dep = Blt_TreeNodeDepth(cmdPtr->tree, node);
@@ -3983,8 +4040,8 @@ FindOp(
         result = TCL_ERROR;
         goto done;
     }
-    if (data.name == NULL && (data.flags & (PATTERN_REGEXP|PATTERN_GLOB))) {
-        Tcl_AppendResult(interp, "must provide -name with -regexp or -glob", 0);
+    if (data.name == NULL && (data.flags & (PATTERN_REGEXP|PATTERN_GLOB|PATTERN_INLIST))) {
+        Tcl_AppendResult(interp, "must provide -name with -regexp -glob -inlist", 0);
         result = TCL_ERROR;
         goto done;
     }
@@ -4016,7 +4073,16 @@ FindOp(
         }
     }
     if ((data.flags & PATTERN_MASK) == PATTERN_REGEXP) {
-        if (Tcl_RegExpMatch(interp, "", data.name) == -1) {
+        if (Tcl_RegExpMatch(interp, "", Tcl_GetString(data.name)) == -1) {
+            result = TCL_ERROR;
+            goto done;
+        }
+    }
+    if ((data.flags & PATTERN_MASK) == PATTERN_INLIST) {
+        int cobjc;
+        Tcl_Obj **cobjv;
+        if (Tcl_ListObjGetElements(interp, data.name,
+            &cobjc, &cobjv) != TCL_OK) {
             result = TCL_ERROR;
             goto done;
         }
@@ -4027,22 +4093,39 @@ FindOp(
         }
     }
     if (data.command != NULL) {
-	int count;
+	int count, acnt;
 	char **p;
 	register int i;
 
 	count = 0;
+	acnt = 0;
 	for (p = data.command; *p != NULL; p++) {
 	    count++;
 	}
+        for (p = data.cmdArgs; *p != NULL; p++) {
+            
+            acnt++;
+        }
 	/* Leave room for node Id argument to be appended */
-	objArr = Blt_Calloc(count + 2, sizeof(Tcl_Obj *));
+	objArr = Blt_Calloc(count + acnt + 2, sizeof(Tcl_Obj *));
 	for (i = 0; i < count; i++) {
 	    objArr[i] = Tcl_NewStringObj(data.command[i], -1);
 	    Tcl_IncrRefCount(objArr[i]);
 	}
+        objArr[i] = Tcl_NewStringObj("", -1);
+        Tcl_IncrRefCount(objArr[i]);
+        i++;
+        for (; i < (count+acnt+1); i++) {
+	    objArr[i] = Tcl_NewStringObj("", 0);
+	    Tcl_IncrRefCount(objArr[i]);
+	}
 	data.objv = objArr;
 	data.objc = count + 1;
+	data.argc = acnt;
+    } else if (data.cmdArgs != NULL) {
+        Tcl_AppendResult(interp, "-cmdargs must be used with -command", 0);
+        result = TCL_ERROR;
+        goto done;
     }
     data.listObjPtr = Tcl_NewListObj(0, (Tcl_Obj **) NULL);
     data.cmdPtr = cmdPtr;
@@ -7994,20 +8077,23 @@ WithOp(
     Tcl_Obj *CONST *objv)
 {
     Blt_TreeNode node;
-    Tcl_Obj *listObjPtr = NULL, *objPtr, **vobjv, **kobjv;
+    Tcl_Obj *listObjPtr = NULL, **vobjv, **kobjv;
     Tcl_Obj *keyList = NULL, *arrName = NULL, *aListObjPtr = NULL;
 
     Blt_TreeKey key;
-    Tcl_Obj *valuePtr;
+    Tcl_Obj *valuePtr, *varObj, *nullObj = NULL, *nodeObj = NULL;
+    Tcl_Obj *hashObj = NULL, *starObj = NULL;
     Blt_TreeKeySearch keyIter;
     int vobjc, kobjc, i, result = TCL_OK, len, cnt = 0, isar;
-    int nobreak = 0, noupdate = 0, unset = 0, aLen;
+    int nobreak = 0, noupdate = 0, unset = 0, init = 0, aLen;
     char *var, *string, *aName, *aPat = NULL;
     int klen, kl, j;
+    int *keySet = NULL;
     unsigned int inode;
     TagSearch cursor = {0};
 
-    var = Tcl_GetString(objv[2]);
+    varObj = objv[2];
+    var = Tcl_GetString(varObj);
 
     while (objc > 5) {
         string = Tcl_GetStringFromObj(objv[3],&len);
@@ -8023,6 +8109,12 @@ WithOp(
             unset = 1;
             objc -= 1;
             objv += 1;
+        } else if (strcmp(string, "-init") == 0) {
+            if (objc<5) goto wrongargs;
+            nullObj = objv[4];
+            init = 1;
+            objc -= 2;
+            objv += 2;
         } else if (strcmp(string, "-glob") == 0) {
             if (objc<5) goto wrongargs;
             aPat = Tcl_GetString(objv[4]);
@@ -8030,10 +8122,6 @@ WithOp(
             objv += 2;
         } else if (strcmp(string, "-keys") == 0) {
             if (objc<5) goto wrongargs;
-            if (Tcl_ListObjGetElements(interp, objv[4], &kobjc, &kobjv) 
-                != TCL_OK) {
-                goto error;		/* Can't split object. */
-            }
             keyList = objv[4];
             objc -= 2;
             objv += 2;
@@ -8044,10 +8132,9 @@ WithOp(
             objc -= 2;
             objv += 2;
         }  else {
-            Tcl_AppendResult(interp, "expected -keys, -array, -glob, -unset, -noupdate, or -break: ", string, 0);
+            Tcl_AppendResult(interp, "expected -init, -keys, -array, -glob, -unset, -noupdate, or -break: ", string, 0);
             return TCL_ERROR;
         }
-
     }
     if (var[0] == 0 && unset && keyList == NULL) {
         Tcl_AppendResult(interp, "can not use -unset with empty var", 0);
@@ -8055,6 +8142,10 @@ WithOp(
     }
     if (aPat != NULL && keyList != NULL) {
         Tcl_AppendResult(interp, "can not use -keys and -glob", 0);
+        return TCL_ERROR;
+    }
+    if (init && keyList == NULL) {
+        Tcl_AppendResult(interp, "must use -keys with -init", 0);
         return TCL_ERROR;
     }
     if (objc != 5) {
@@ -8071,6 +8162,28 @@ WithOp(
     if (FindTaggedNodes(interp, cmdPtr, objv[3], &cursor) != TCL_OK) {
         return TCL_ERROR;
     }
+    if (keyList != NULL) {
+        keyList = Tcl_DuplicateObj(keyList);
+        Tcl_IncrRefCount(keyList);
+        if (Tcl_ListObjGetElements(interp, keyList, &kobjc, &kobjv) 
+            != TCL_OK) {
+            Tcl_DecrRefCount(keyList);
+            return TCL_ERROR;
+        }
+        if (init && kobjc>0) {
+            keySet = (int*) Blt_Calloc(kobjc, sizeof(int));
+        }
+    }
+    if (nullObj != NULL) {
+        nullObj = Tcl_DuplicateObj(nullObj);
+        Tcl_IncrRefCount(nullObj);
+    }
+    hashObj = Tcl_NewStringObj("#",-1);
+    starObj = Tcl_NewStringObj("*",-1);
+    nodeObj = Tcl_NewIntObj(0);
+    Tcl_IncrRefCount(hashObj);
+    Tcl_IncrRefCount(starObj);
+    Tcl_IncrRefCount(nodeObj);
     for (node = FirstTaggedNode(&cursor);
         node != NULL; result = TCL_OK, node = NextTaggedNode(node, &cursor)) {
             
@@ -8093,14 +8206,50 @@ WithOp(
                 }
             }
         }
-        if (var[0] &&
-            Tcl_SetVar2(interp, var, "#", Blt_Itoa(Blt_TreeNodeId(node)), 0) == NULL) {
-            goto error;
+        if (init) {
+            if (keySet != NULL) {
+                for (i=0; i<kobjc; i++) {
+                    keySet[i] = 0;
+                }
+            } else {
+                for (i=0; i<kobjc; i++) {
+                    if (var[0]) {
+                        Tcl_ObjSetVar2(interp, varObj, kobjv[i], nullObj, 0);
+                    } else {
+                        Tcl_ObjSetVar2(interp, kobjv[i], NULL, nullObj, 0);
+                    }
+                }
+            }
+        }
+        if (var[0]) {
+            if (nodeObj->refCount ==  2) {
+                Tcl_DecrRefCount(nodeObj);
+                Tcl_SetIntObj(nodeObj, Blt_TreeNodeId(node));
+                Tcl_IncrRefCount(nodeObj);
+            } else {
+                Tcl_DecrRefCount(nodeObj);
+                nodeObj = Tcl_NewIntObj(Blt_TreeNodeId(node));
+                Tcl_IncrRefCount(nodeObj);
+            }
+            if (Tcl_ObjSetVar2(interp, varObj, hashObj, nodeObj, 0) == NULL) {
+                goto error;
+            }
         }
     
-        if (listObjPtr != NULL) { Tcl_DecrRefCount(listObjPtr); }
-        listObjPtr = Tcl_NewListObj(0, NULL);
-        Tcl_IncrRefCount(listObjPtr);
+        if ((keyList == NULL && var[0] != 0) || noupdate == 0) {
+            if (listObjPtr && Tcl_IsShared(listObjPtr)) {
+                Tcl_DecrRefCount(listObjPtr);
+                listObjPtr = Tcl_NewListObj(0, NULL);
+                Tcl_IncrRefCount(listObjPtr);
+            } else {
+                if (listObjPtr != NULL) {
+                    Tcl_SetListObj(listObjPtr, 0, NULL);
+                } else {
+                    listObjPtr = Tcl_NewListObj(0, NULL);
+                    Tcl_IncrRefCount(listObjPtr);
+                }
+            }
+        }
         
         isar = 0;
         if (arrName != NULL) {
@@ -8110,20 +8259,22 @@ WithOp(
             Tcl_IncrRefCount(aListObjPtr);
             if (Blt_TreeArrayNames(NULL, cmdPtr->tree, node, aName,
                 aListObjPtr, aPat) != TCL_OK) {
-                if (Blt_TreeGetValue(NULL, cmdPtr->tree, node,
+                    if (Blt_TreeGetValue(NULL, cmdPtr->tree, node,
                     aName, &valuePtr) != TCL_OK || valuePtr == NULL) {
-                    continue;
+                        continue;
                 }
                 Tcl_AppendResult(interp, "failed to split \"", aName, "\" for node ", Blt_Itoa(Blt_TreeNodeId(node)), 0);
                 goto error;
             }
             if (Tcl_ListObjGetElements(interp, aListObjPtr, &vobjc, &vobjv) 
-                != TCL_OK) {
+            != TCL_OK) {
                 goto error;		/* Can't split object. */
             }
             for (j=0; j<vobjc; j++) {
                 char *skey;
-                skey = Tcl_GetString(vobjv[j]);
+                Tcl_Obj *skeyObj;
+                skeyObj = vobjv[j];
+                skey = Tcl_GetString(skeyObj);
                 if (keyList != NULL) {
                     char *kstr;
                     kl = strlen(skey);
@@ -8134,18 +8285,21 @@ WithOp(
                         }
                     }
                     if (i>=kobjc) continue;
+                    if (keySet != NULL) keySet[i] = 1;
                 }
-                Tcl_ListObjAppendElement(interp, listObjPtr, vobjv[j]);
+                if (listObjPtr != NULL) {
+                    Tcl_ListObjAppendElement(interp, listObjPtr, skeyObj);
+                }
                 if (Blt_TreeGetArrayValue(interp, cmdPtr->tree, node, aName,
                     skey, &valuePtr) != TCL_OK) {
                         goto error;
                 }
                 if (var[0]) {
-                    if (Tcl_SetVar2Ex(interp, var, skey, valuePtr,0) == NULL) {
+                    if (Tcl_ObjSetVar2(interp, varObj, skeyObj, valuePtr,0) == NULL) {
                         goto error;
                     }
                 } else {
-                    if (Tcl_SetVar2Ex(interp, skey, NULL, valuePtr,0) == NULL) {
+                    if (Tcl_ObjSetVar2(interp, skeyObj, NULL, valuePtr,0) == NULL) {
                         goto error;
                     }
                 }
@@ -8153,49 +8307,110 @@ WithOp(
             goto doit;
         }
         
-        for (key = Blt_TreeFirstKey(cmdPtr->tree, node, &keyIter); key != NULL; 
-            key = Blt_TreeNextKey(cmdPtr->tree, &keyIter)) {
-                
-            if (keyList != NULL) {
-                char *kstr;
-                kl = strlen(key);
-                for (i=0; i<kobjc; i++) {
-                    kstr = Tcl_GetStringFromObj(kobjv[i], &klen);
-                    if (kl == klen && kstr[0] == key[0] && strcmp(kstr, key) == 0) {
-                        break;
+        if (keyList != NULL) {
+            Tcl_Obj *skeyObj;
+            for (i=0; i<kobjc; i++) {
+                skeyObj = kobjv[i];
+                key = Tcl_GetStringFromObj(skeyObj, &klen);
+                if (Blt_TreeGetValue(NULL, cmdPtr->tree, node, key,
+                    &valuePtr) != TCL_OK) {
+                        continue;
+                }
+
+
+                if (i>=kobjc) continue;
+                if (aPat != NULL && !Tcl_StringMatch(key, aPat)) {
+                    continue;
+                }
+                if (keySet != NULL) keySet[i] = 1;
+                if (listObjPtr != NULL) {
+                    Tcl_ListObjAppendElement(interp, listObjPtr, skeyObj);
+                }
+                if (var[0]) {
+                    if (Tcl_ObjSetVar2(interp, varObj, skeyObj, valuePtr,0) == NULL) {
+                        goto error;
+                    }
+                } else {
+                    if (Tcl_ObjSetVar2(interp, skeyObj, NULL, valuePtr,0) == NULL) {
+                        goto error;
                     }
                 }
-                if (i>=kobjc) continue;
+
             }
-            if (aPat != NULL && !Tcl_StringMatch(key, aPat)) {
-                continue;
-            }
-            objPtr = Tcl_NewStringObj(key, -1);
-            Tcl_ListObjAppendElement(interp, listObjPtr, objPtr);
-            if (Blt_TreeGetValue(NULL, cmdPtr->tree, node, key, &valuePtr) 
+        } else {
+            for (key = Blt_TreeFirstKey(cmdPtr->tree, node, &keyIter); key != NULL; 
+            key = Blt_TreeNextKey(cmdPtr->tree, &keyIter)) {
+                Tcl_Obj *skeyObj;
+            
+                skeyObj = NULL;
+                
+                if (keyList != NULL) {
+                    char *kstr;
+                    kl = strlen(key);
+                    for (i=0; i<kobjc; i++) {
+                        skeyObj = kobjv[i];
+                        kstr = Tcl_GetStringFromObj(skeyObj, &klen);
+                        if (kl == klen && kstr[0] == key[0] && strcmp(kstr, key) == 0) {
+                            break;
+                        }
+                    }
+                    if (i>=kobjc) continue;
+                    if (keySet != NULL) keySet[i] = 1;
+                }
+                if (aPat != NULL && !Tcl_StringMatch(key, aPat)) {
+                    continue;
+                }
+                if (skeyObj == NULL) {
+                    skeyObj = Tcl_NewStringObj(key, -1);
+                }
+                if (listObjPtr != NULL) {
+                    Tcl_ListObjAppendElement(interp, listObjPtr, skeyObj);
+                }
+                if (Blt_TreeGetValue(NULL, cmdPtr->tree, node, key, &valuePtr) 
                 != TCL_OK) {
-                goto error;
-            }
-            /* Don't expose the array (maybe we should do this for all types?) */
-            /*if (Blt_IsArrayObj(valuePtr)) {
-                isar = 1;
-                valuePtr = Tcl_NewStringObj(Tcl_GetString(valuePtr), -1);
-            }*/
-            if (var[0]) {
-                if (Tcl_SetVar2Ex(interp, var, key, valuePtr,0) == NULL) {
                     goto error;
                 }
-            } else {
-                if (Tcl_SetVar2Ex(interp, key, NULL, valuePtr,0) == NULL) {
-                    goto error;
+
+                /* Don't expose the array (maybe we should do this for all types?) */
+                /*if (Blt_IsArrayObj(valuePtr)) {
+                    isar = 1;
+                    valuePtr = Tcl_NewStringObj(Tcl_GetString(valuePtr), -1);
+                }*/
+                if (var[0]) {
+                    if (Tcl_ObjSetVar2(interp, varObj, skeyObj, valuePtr,0) == NULL) {
+                        goto error;
+                    }
+                } else {
+                    if (Tcl_ObjSetVar2(interp, skeyObj, NULL, valuePtr,0) == NULL) {
+                        goto error;
+                    }
                 }
             }
         }
+
 doit:
     
-        if (keyList == NULL && var[0] &&
-            Tcl_SetVar2Ex(interp, var, "*", listObjPtr, 0) == NULL) {
-            goto error;
+        if (init && keySet != NULL) {
+            for (i=0; i<kobjc; i++) {
+                if (keySet[i] == 0) {
+                    if (var[0]) {
+                        Tcl_ObjSetVar2(interp, varObj, kobjv[i], nullObj, 0);
+                    } else {
+                        Tcl_ObjSetVar2(interp, kobjv[i], NULL, nullObj, 0);
+                    }
+                }
+            }
+        }
+        if (keyList == NULL && var[0]) {
+            if (cnt > 1) {
+                if (Tcl_ObjSetVar2(interp, varObj, starObj, listObjPtr, 0) == NULL) {
+                    goto error;
+                }
+            } else {
+                if (Tcl_SetVar2Ex(interp, var, "*", listObjPtr, 0) == NULL) {
+                    goto error;
+                }
+            }
         }
 
         result = Tcl_EvalObjEx(interp, objv[4], 0);
@@ -8229,12 +8444,13 @@ doit:
                     }
                 }
                 if (var[0]) {
-                    if ((newValuePtr = Tcl_GetVar2Ex(interp, var, Tcl_GetString(vobjv[i]), 0)) == NULL) {
+                    if ((newValuePtr = Tcl_ObjGetVar2(interp, varObj, vobjv[i], 0)) == NULL) {
                         Tcl_ResetResult(interp);
                         continue;
                     }
+                    
                 } else {
-                    if ((newValuePtr = Tcl_GetVar2Ex(interp, Tcl_GetString(vobjv[i]), NULL, 0)) == NULL) {
+                    if ((newValuePtr = Tcl_ObjGetVar2(interp, vobjv[i], NULL, 0)) == NULL) {
                         Tcl_ResetResult(interp);
                         continue;
                     }
@@ -8274,16 +8490,24 @@ doit:
     if (result == TCL_OK) {
         Tcl_SetObjResult(interp, Tcl_NewIntObj(cnt));
     }
+doneall:
     if (listObjPtr != NULL) { Tcl_DecrRefCount(listObjPtr); }
     if (aListObjPtr != NULL) { Tcl_DecrRefCount(aListObjPtr); }
+    if (nullObj != NULL) { Tcl_DecrRefCount(nullObj); }
+    if (nodeObj != NULL) { Tcl_DecrRefCount(nodeObj); }
+    if (starObj != NULL) { Tcl_DecrRefCount(starObj); }
     DoneTaggedNodes(&cursor);
+    if (keyList != NULL) {
+        Tcl_DecrRefCount(keyList);
+    }
+    if (keySet != NULL) {
+        Blt_Free(keySet);
+    }
     return result;
     
 error:
-    DoneTaggedNodes(&cursor);
-    if (listObjPtr != NULL) { Tcl_DecrRefCount(listObjPtr); }
-    if (aListObjPtr != NULL) { Tcl_DecrRefCount(aListObjPtr); }
-    return TCL_ERROR;
+    result = TCL_ERROR;
+    goto doneall;
 }
 
 /*

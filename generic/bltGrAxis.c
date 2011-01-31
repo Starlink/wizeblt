@@ -1268,9 +1268,9 @@ FixAxisRange(axisPtr)
  * ----------------------------------------------------------------------
  */
 static double
-NiceNum(x, round)
+NiceNum(x, doround)
     double x;
-    int round;			/* If non-zero, round. Otherwise take ceiling
+    int doround;			/* If non-zero, round. Otherwise take ceiling
 				 * of value. */
 {
     double expt;		/* Exponent of x */
@@ -1279,7 +1279,7 @@ NiceNum(x, round)
 
     expt = floor(log10(x));
     frac = x / EXP10(expt);	/* between 1 and 10 */
-    if (round) {
+    if (doround) {
 	if (frac < 1.5) {
 	    fnice = 1.0;
 	} else if (frac < 3.0) {
@@ -4214,15 +4214,19 @@ Blt_AxisOp(graphPtr, margin, argc, argv)
     if (proc == NULL) {
 	return TCL_ERROR;
     }
-    argv[2] = (char *)margin; /* Hack. Slide a reference to the margin in 
-			       * the argument list. Needed only for UseOp.
-			       */
-    axisPtr = Blt_GetFirstAxis(graphPtr->margins[margin].axes);
-    if (axisPtr == NULL) {
-        Tcl_AppendResult(graphPtr->interp, "bad xais", (char *)NULL);
-        return TCL_ERROR;
+    if (proc == UseOp) {
+ 	argv[2] = (char *)margin; /* Hack. Slide a reference to the margin in 
+ 				   * the argument list. Needed only for UseOp.
+ 				   */
+ 	result = (*proc)(graphPtr, NULL, argc - 3, argv +3);
+     } else {
+ 	axisPtr = Blt_GetFirstAxis(graphPtr->margins[margin].axes);
+ 	if (axisPtr == NULL) {
+ 	    Tcl_AppendResult(graphPtr->interp, "bad axis", (char *)NULL);
+ 	    return TCL_ERROR;
+ 	}
+ 	result = (*proc)(graphPtr, axisPtr, argc - 3, argv + 3);
     }
-    result = (*proc)(graphPtr, axisPtr, argc - 3, argv + 3);
     return result;
 }
 

@@ -559,6 +559,9 @@ Use value with field given by \fIkey\fR.
 Like the \fBtreeview find -column\fR option,
 this key may contain an array referrence.
 .TP 1i
+\fB\-cmdargs\fR \fIcolumns\fR
+Specify columns whose values are to be appended to \fB\-command\fR.
+.TP 1i
 \fB\-command\fR \fIcommand\fR
 Invoke \fIcommand\fR for each matching node.  Before \fIcommand\fR is
 invoked, the id of the node is appended.  You can control 
@@ -568,6 +571,8 @@ returns an error.  But if \fIcommand\fR returns \fBbreak\fR, then
 processing stops, no error is generated.  If \fIcommand\fR returns 
 \fBcontinue\fR, then processing
 stops on that subtree and continues on the next.
+If \fIcommand\fR returns \fBreturn\fR, then the returned integer
+is used to indicate 1 for match or 0 for mismatch.
 .TP 1i
 \fB\-count\fR
 Just return the number of matches.
@@ -1340,13 +1345,16 @@ stored in \fIvariable(#)\fR (which could then
 be overwritten by a key of that name).
 By default, the array is not cleaned up before or after each execution.
 However, if \fB-unset\fR is used, the array is unset at the start of each
-iteration.
+iteration, and \fB-init\fR can be used to specify a default value.
+Also, long running queries can speed up by initializing variables 
+prior to the call to \fBwith\fR.
 .sp
-If the \fIvariable\fR name string is zero length, an array is not used.
-Also * and # do not get set.  Note this can be dangerous
-(if not using -keys) as arbitrary local variables can be overwritten.
+If the \fIvariable\fR name string is zero length, an simple
+variables are used instead of an array,
+and * and # do not get set.
+Note, when not using -keys, arbitrary local variables can get overwritten.
 .sp
-If \fB-array\fR is used, \fBwith\fR operates on the keys of an array
+If \fB-array\fR is used, \fBwith\fR operates on the keys of an tree array/dict
 instead of the keys of the node.
 .sp
 Upon normal completion, the number of times \fIscript\fR
@@ -1369,6 +1377,10 @@ an error will occur.
 \fB-break\fR
 Treat \fBbreak\fR and \fBcontinue\fR like \fBforeach\fR does
 rather than just passing them up to the enclosing script body.
+.TP 1i
+\fB-init\fI value\fR
+Variables specified by \fB-keys\fR are to be initialized to \fIvalue\fR
+for each node where key is missing.
 .TP 1i
 \fB-keys\fR \fIkeylist\fR
 Copy only the named keys and does not set (*).

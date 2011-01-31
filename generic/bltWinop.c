@@ -2459,7 +2459,7 @@ static Blt_OpSpec winOps[] =
 #ifdef notdef
     {"reparent", 3, (Blt_Op)ReparentOp, 3, 4, "window ?parent?",},
 #endif
-    {"snap", 2, (Blt_Op)SnapOp, 4, 6, "window photoName ?width height?",},
+    {"snap", 2, (Blt_Op)SnapOp, 4, 8, "window photoName ?width height?",},
     {"unmap", 1, (Blt_Op)UnmapOp, 2, 0, "window ?window?...",},
     {"warpto", 1, (Blt_Op)WarpToOp, 2, 5, "?window?",},
 };

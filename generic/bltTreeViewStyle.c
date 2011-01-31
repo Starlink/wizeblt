@@ -3283,7 +3283,7 @@ EmbWinDisplay(TreeView *tvPtr, WindowCell *wcPtr,
     int diff, reqWidth, reqHeight, sticky, diffx, diffy;
 
 
-    if ((diff = (y-tvPtr->titleHeight- tvPtr->inset))<0) {
+    if ((diff = (y-tvPtr->titleHeight- tvPtr->insetY))<0) {
         height += diff;
         y -= diff;
     }
@@ -3436,7 +3436,7 @@ DrawWindowBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y)
         tkwin = wcPtr->tkwin;
         width = columnWidth;
         height = entryPtr->height-1;
-        if ((diff = (y-tvPtr->titleHeight- tvPtr->inset))<0) {
+        if ((diff = (y-tvPtr->titleHeight- tvPtr->insetY))<0) {
             height += diff;
             y -= diff;
         }
@@ -3872,10 +3872,10 @@ DrawValue(tvPtr, entryPtr, valuePtr)
     height = entryPtr->height - 1;
     width = valuePtr->columnPtr->width - PADDING(columnPtr->pad);
 
-    top = tvPtr->titleHeight + tvPtr->inset;
-    bottom = Tk_Height(tvPtr->tkwin) - tvPtr->inset;
-    left = tvPtr->inset;
-    right = Tk_Width(tvPtr->tkwin) - tvPtr->inset;
+    top = tvPtr->titleHeight + tvPtr->insetY;
+    bottom = Tk_Height(tvPtr->tkwin) - tvPtr->insetY;
+    left = tvPtr->insetX;
+    right = Tk_Width(tvPtr->tkwin) - tvPtr->insetX;
 
     if (((dx + width) < left) || (dx > right) ||
 	((dy + height) < top) || (dy > bottom)) {

@@ -123,13 +123,13 @@ Blt_DrawCharsBitmap(display, bitmap, w, width, height, gc, font, x, y, textPtr)
     /* get the pixmap image */
     pixmapimage = XGetImage(display, pixmap, 0, 0, width, height,
         AllPlanes, XYPixmap);
-        /* average the image to get the char in a single bit plane */
-        Blt_AverageImage(pixmapimage, width, height, dr);
-        /* get an image for the bitmap */
-        bitmapimage = XGetImage(display, bitmap, 0, 0, width, height,
-        1, XYPixmap);
-        /* copy the first bit plane from the averaged pixmap to the bitmap */
-        for (i=0 ; i<width ; i++) {
+    /* average the image to get the char in a single bit plane */
+    Blt_AverageImage(pixmapimage, width, height, dr);
+    /* get an image for the bitmap */
+    bitmapimage = XGetImage(display, bitmap, 0, 0, width, height,
+	 1, XYPixmap);
+    /* copy the first bit plane from the averaged pixmap to the bitmap */
+    for (i=0 ; i<width ; i++) {
         for(j=0 ; j<height ; j++) {
             pixel = XGetPixel(pixmapimage, i, j);
             XPutPixel(bitmapimage, i, j, pixel);

@@ -807,11 +807,16 @@ are searched in reverse order.  The valid flags are:
 Add tag to each matching entry.
 The tag will be created even if no nodes are tagged.
 .TP 1i
+\fB\-cmdargs\fR \fIcolumns\fR
+Specify columns whose values are to be appended to \fB\-command\fR.
+.TP 1i
 \fB\-command\fR \fIcommand\fR
 Invoke \fIcommand\fR for each matching node.  Before \fIcommand\fR is
 invoked, the id of the node is appended. If \fIcommand\fR
 generates an error, processing stops and the \fBfind\fR operation
 returns an error.
+If \fIcommand\fR returns \fBreturn\fR, then the returned integer 
+is used to indicate 1 for match or 0 for mismatch.
 .TP 1i
 \fB\-column\fI col\fR
 Match name against value of given column.
@@ -1291,8 +1296,9 @@ no sort is performed.
 .TP
 \fB\-command\fI string\fR
 Specifies a Tcl procedure to be called when sorting nodes. 
-The procedure is called with three arguments: the pathname of the widget
-and the fields of two entries.  The procedure returns 1 if the first
+The procedure is called with 6 arguments: the pathname of the widget,
+the node id of two entries, the column key being sorted
+and the label values of the two entries.  The procedure returns 1 if the first
 node is greater than the second, -1 is the second is greater, and 0
 if equal.  
 .TP
@@ -1943,6 +1949,12 @@ The id of the node.
 \fB%%\fR
 Translates to a single percent.
 .RE
+.TP
+\fB\-padx \fIpixels\fR
+Set the padding on left and right of widget.
+.TP
+\fB\-pady \fIpixels\fR
+Set the padding on top and bottom of widget.
 .TP
 \fB\-relief \fIrelief\fR
 Specifies the 3-D effect for the widget.  \fIRelief\fR
@@ -2843,6 +2855,10 @@ Set resize rule is dashed.
 .TP
 \fB\-scrolltile \fIbool\fR
 Tile image scrolls.
+.TP
+\fB\-sortaltcolumns \fIlist\fR
+List of alternate columns sort can use when cell values are equal.
+It is an error to include the current or tree column.
 .TP
 \fB\-sortcommand \fIscript\fR
 Command to actually compare entries during sort.

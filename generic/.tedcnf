@@ -1,0 +1,21 @@
+version 2.0
+options {
+	restore:files /home/pcmacdon/src/wize-3.2/wize/blt2.5/generic/bltWinop.c
+	geom 640x709
+}
+recents {
+	/home/pcmacdon/src/ted/tdb.tcl 15
+	/tmp/unnamed.gui 1
+	/home/pcmacdon/ttt.tcl 1
+	/home/pcmacdon/src/wize-3.2/Mod/Opt.tcl 1
+	/home/pcmacdon/src/wize-3.2/wize/blt2.5/generic/bltVector.c 1
+	/home/pcmacdon/src/wize-3.2/wize/blt2.5/generic/bltColor.c 1
+	/home/pcmacdon/src/wize-3.2/exts/tkpath/demos/isexy.tcl 1
+	/home/pcmacdon/src/wize-3.2/exts/tkpath/demos/opacity.tcl 20
+	/home/pcmacdon/src/wize-3.2/exts/tkpath/demos/sheetmetal.tcl 1
+	/home/pcmacdon/src/wize-3.2/wize/blt2.5/generic/bltNsUtil.c 268
+	/home/pcmacdon/src/wize-3.2/Mod/wiz/admin.tcl 577
+	/home/pcmacdon/src/wize-3.2/Mod/wiz/tk.tcl 1
+	/home/pcmacdon/tmp/history.gui 1
+	/home/pcmacdon/src/wize-3.2/wize/blt2.5/generic/bltWinop.c 2470
+}

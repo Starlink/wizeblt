@@ -391,20 +391,14 @@ Select a tab by name or index, and cause it to become visible, selected,
 activated, and receive focus.  This is a shortform for using separate
 commands.
 .TP
-\fIpathName \fBtab tearoff\fR ?\fIindex\fR? ?\fInewName\fR?
-Queries or modifies tearoff tabs.  With no arguments returns the
-names of all tabs that are currently torn off.
-.sp
-With two arguments,
-reparents the widget embedded into \fIindex\fR, placing
-it inside of \fInewName\fR.  \fINewName\fR is either the name of
-an new widget that will contain the embedded widget or the name
-of the \fBtabset\fR widget.  It the last case, the embedded widget
-is put back into the folder.
-.sp
-If no \fInewName\fR argument is provided, then the name of the current
-parent of the embedded widget is returned.
+\fIpathName \fBtab tearoff\fR ?\fIindex\fR?
+With no  ?\fIindex\fR?, returns list of all torn-off tabs.
+Otherwise, return the window for the given torn-off tab.
 .RE
+.TP
+\fIpathName \fBtab tearoff\fR ?\fIindex\fR?
+With no  ?\fIindex\fR?, returns list of all torn-off tabs.
+Otherwise, toggles the torn-off state of the tab.
 .TP
 \fIpathName \fBview \fIargs\fR
 This command queries or changes the position of the
@@ -894,6 +888,9 @@ pattern. The default is \fBBLT\fR.
 Specifies the text of the tab's label.  The exact way the text is
 drawn may be affected by other options such as \fB\-state\fR or
 \fB\-rotate\fR.
+.TP
+\fB\-tornwindow \fItext\fR
+Name of window that was torn off.
 .TP
 \fB\-underline \fInum\fR
 Character to underline in text.  Default is -1.

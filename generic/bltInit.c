@@ -117,6 +117,9 @@ foreach var { env(BLT_LIBRARY) blt_libPath tcl_library env(TCL_LIBRARY) } { \n\
 if { $blt_library != \"\" } { \n\
     global auto_path \n\
     lappend auto_path $blt_library \n\
+    if { [file exists [file join $blt_library init.tcl]] } {\n\
+       source [file join $blt_library init.tcl]\n\
+    }\n\
 }\n\
 unset var path\n\
 \n"
@@ -533,12 +536,12 @@ Blt_Init(interp)
 	if (SetLibraryPath(interp) != TCL_OK) {
 	    return TCL_ERROR;
 	}
-	if (Tcl_Eval(interp, initScript) != TCL_OK) {
-	    return TCL_ERROR;
-	}
 	nsPtr = Tcl_CreateNamespace(interp, "blt", NULL, 
 				    (Tcl_NamespaceDeleteProc *) NULL);
 	if (nsPtr == NULL) {
+	    return TCL_ERROR;
+	}
+	if (Tcl_Eval(interp, initScript) != TCL_OK) {
 	    return TCL_ERROR;
 	}
 #ifdef USE_BLT_STUBS
@@ -559,11 +562,11 @@ Blt_Init(interp)
 	Blt_RegisterArrayObj(interp);
 	bltNaN = MakeNaN();
 #ifdef USE_BLT_STUBS
-	if (Tcl_PkgProvideEx(interp, "BLT", BLT_VERSION, &bltStubs) != TCL_OK) {
+	if (Tcl_PkgProvideEx(interp, "BLT", BLT_PATCH_LEVEL, &bltStubs) != TCL_OK) {
 	    return TCL_ERROR;
 	}
 #else
-	if (Tcl_PkgProvideEx(interp, "BLT", BLT_VERSION, NULL) != TCL_OK) {
+	if (Tcl_PkgProvideEx(interp, "BLT", BLT_PATCH_LEVEL, NULL) != TCL_OK) {
 	    return TCL_ERROR;
 	}
 #endif

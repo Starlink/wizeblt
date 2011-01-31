@@ -20,6 +20,7 @@ miscFiles     = bltCanvEps.pro \
 		tabnotebook.tcl \
 		tabset.tcl \
 		treeview.tcl \
+		init.tcl \
 		tclIndex \
 		$(cursors)
 

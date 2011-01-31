@@ -951,7 +951,7 @@ if test "$prefix" = "NONE" ; then
 fi
 
 if test "$exec_prefix" = "NONE" ; then
-  exec_prefix=${TCL_EXEC_PREFIX}
+  exec_prefix=$prefix
 fi
 
 # -------------------------------------------------------------------------

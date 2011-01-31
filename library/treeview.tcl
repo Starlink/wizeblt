@@ -307,8 +307,10 @@ proc ::blt::tv::Initialize { w } {
     $w column bind Rule <ButtonRelease-1> {
 	%W column configure [%W column current] -width [%W column resize set]
     }
+    set ::blt::tv::curRelief raised
     $w column bind all <ButtonPress-1> {
 	set blt::tv::column [%W column current]
+	set blt::tv::curRelief [%W column cget $blt::tv::column -titlerelief]
 	%W column configure $blt::tv::column -titlerelief sunken
     }
     $w column bind all <ButtonRelease-1> {
@@ -316,7 +318,7 @@ proc ::blt::tv::Initialize { w } {
 	if { $column != "" } {
 	    %W column invoke $column
 	}
-	%W column configure $blt::tv::column -titlerelief raised
+         %W column configure $blt::tv::column -titlerelief $blt::tv::curRelief
     }
     if {$oldedit} {
     $w bind TextBoxStyle <Alt-ButtonPress-3> { 
@@ -875,12 +877,17 @@ proc blt::tv::SetFocus { w tagOrId } {
 #	"prevsibling", "nextsibling", etc.
 #
 # ----------------------------------------------------------------------
-proc blt::tv::MoveFocus { w tagOrId } {
+proc blt::tv::MoveFocus { w tagOrId {flag 0}} {
     set mode [$w cget -selectmode]
     switch -- $mode {
         multiple {
            catch {$w focus $tagOrId}
-        }
+           if {!$flag} {
+               $w selection clearall
+           }
+           if {[catch {$w selection set focus}]} return
+           $w selection anchor focus
+       }
         single {
            catch {$w focus $tagOrId}
            $w selection clearall
@@ -1717,11 +1724,11 @@ bind ${className} <Control-KeyPress-n> [bind ${className} <KeyPress-Down>]
 bind ${className} <Control-KeyPress-p> [bind ${className} <KeyPress-Up>]
 
 bind ${className} <Shift-KeyPress-Up> {
-    blt::tv::MoveFocus %W prevsibling
+    blt::tv::MoveFocus %W up 1
 }
 
 bind ${className} <Shift-KeyPress-Down> {
-    blt::tv::MoveFocus %W nextsibling
+    blt::tv::MoveFocus %W down 1
 }
 
 bind ${className} <KeyPress-Prior> {

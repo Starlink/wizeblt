@@ -165,11 +165,9 @@ proc blt::TabsetSelect { widget tab } {
 	       $widget select $index
 	       $widget focus $index
 	       $widget see $index
-	       set w [$widget tab tearoff $index]
-	       if { ($w != "") && ($w != "$widget") } {
-	           TabsetRaise [winfo toplevel $w]
-	       } else {
-	           raise [winfo toplevel $widget]
+	       set torn [$widget tab cget $index -tornwindow]
+	       if {$torn != {}} {
+                    raise $torn
                }
 	       $widget invoke $index
                event generate $widget <<TabsetSelect>>
@@ -181,50 +179,14 @@ proc blt::TabsetSelect { widget tab } {
     return -code $rc $rv
 }
 
-# ----------------------------------------------------------------------
-#
-# DestroyTearoff --
-#
-#	Destroys the toplevel window and the container tearoff 
-#	window holding the embedded widget.  The widget is placed
-#	back inside the tab.
-#
-# Arguments:	
-#	widget		Tabset widget.
-#	tab		Tab selected.
-#
-# ----------------------------------------------------------------------
-proc blt::DestroyTearoff { widget tab } {
-    regsub -all {\.} [$widget get $tab] {_} name
-    set top "$widget.toplevel-$name"
-    if { [winfo exists $top] } {
-	wm withdraw $top
-	update
-	$widget tab tearoff $tab $widget
-	destroy $top
-        event generate $widget <<TabsetUntearoff>> -x [$widget tab number $tab]
-    }
+proc blt::DestroyTearoff { widget tab window} {
+    wm forget $window
+    $widget tab conf $tab -tornwindow {}
+    event generate $widget <<TabsetUntearoff>> -x [$widget tab number $tab]
+    $widget tab conf $tab -window $window
 }
 
-# ----------------------------------------------------------------------
-#
-# CreateTearoff --
-#
-#	Creates a new toplevel window and moves the embedded widget
-#	into it.  The toplevel is placed just below the tab.  The
-#	DELETE WINDOW property is set so that if the toplevel window 
-#	is requested to be deleted by the window manager, the embedded
-#	widget is placed back inside of the tab.  Note also that 
-#	if the tabset container is ever destroyed, the toplevel is
-#	also destroyed.  
-#
-# Arguments:	
-#	widget		Tabset widget.
-#	tab		Tab selected.
-#	x y		The coordinates of the mouse pointer.
-#
-# ----------------------------------------------------------------------
-proc blt::CreateTearoff { widget tab rootX rootY } {
+proc blt::CreateTearoff { widget tab args } {
 
     # ------------------------------------------------------------------
     # When reparenting the window contained in the tab, check if the
@@ -236,40 +198,23 @@ proc blt::CreateTearoff { widget tab rootX rootY } {
     # itself.
     # ------------------------------------------------------------------
 
+    set tab [$widget index $tab]
     set focus [focus]
     set name [$widget get $tab]
     set window [$widget tab cget $name -window]
     if { ($focus == $window) || ([string match  $window.* $focus]) } {
-	focus -force $widget
+        focus -force $widget
     }
-    regsub -all {\.} [$widget get $tab] {_} name
-    set top "$widget.toplevel-$name"
-    toplevel $top
-    $widget tab tearoff $tab $top.container
-    blttable $top $top.container -fill both
-
-    incr rootX 10 ; incr rootY 10
-    wm geometry $top +$rootX+$rootY
-    set name [$widget get $tab]
-
-    set parent [winfo toplevel $widget]
-    wm title $top "[wm title $parent]: [$widget tab cget $name -text]"
-    if {[$widget cget -transient]} {
-        wm transient $top $parent
+    if {$window == {}} return
+    wm manage $window
+    wm title $window "[$widget tab cget $name -text]"
+    if {[winfo width $widget]>10} {
+        wm geometry $window [winfo width $widget]x[winfo height $widget]
     }
-
-    #blt::winop changes $top
-
-    # 
+    $widget tab conf $tab -tornwindow $window
     # If the user tries to delete the toplevel, put the window back
     # into the tab folder.  
-    #
-    wm protocol $top WM_DELETE_WINDOW [list blt::DestroyTearoff $widget $tab]
-    # 
-    # If the container is ever destroyed, automatically destroy the
-    # toplevel too.  
-    #
-    bind $top.container <Destroy> [list destroy $top]
+    wm protocol $window WM_DELETE_WINDOW [list blt::DestroyTearoff $widget $tab $window]
     event generate $widget <<TabsetTearoff>> -x [$widget tab number $tab]
 }
 
@@ -293,11 +238,28 @@ proc blt::Tearoff { widget x y index } {
     }
     $widget invoke $tab
 
-    set container [$widget tab tearoff $index]
-    if { $container == "$widget" } {
+    set torn [$widget tab tearoff $index]
+    if { $torn == $widget } {
 	blt::CreateTearoff $widget $tab $x $y
-    } elseif { $container != "" } {
-	blt::DestroyTearoff $widget $tab
+    } else {
+        set window [$widget tab cget $tab -window]
+	blt::DestroyTearoff $widget $tab $window
+    }
+}
+
+proc blt::TabsetTearoff { widget {index focus} } {
+    set tab [$widget index -both $index]
+    if { $tab == "" } {
+        return
+    }
+    $widget invoke $tab
+
+    set window [$widget tab cget $tab -window]
+    if { $window != {}} {
+        blt::CreateTearoff $widget $tab 
+    } else {
+        set window [$widget tab cget $tab -tornwindow]
+        blt::DestroyTearoff $widget $tab $window
     }
 }
 

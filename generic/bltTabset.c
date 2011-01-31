@@ -430,6 +430,7 @@ typedef struct {
     int underline;              /* Char to underline in tab. */
     int hidden;              /* Tab is hidden. */
     char *textDisp; /* Actual displayed text, after truncation. */
+    char *tornWin; /* Name of window torn off. */
 } Tab;
 
 static Tk_ConfigSpec tabConfigSpecs[] =
@@ -502,6 +503,9 @@ static Tk_ConfigSpec tabConfigSpecs[] =
     {TK_CONFIG_CUSTOM, "-tile", "tabTile", "TabTile",
 	(char *)NULL, Tk_Offset(Tab, tile), TK_CONFIG_NULL_OK,
 	&bltTileOption},
+    {TK_CONFIG_STRING, "-tornwindow", "tornWindow",
+	"String", (char *)NULL, 
+	Tk_Offset(Tab, tornWin), TK_CONFIG_NULL_OK},
     {TK_CONFIG_INT, "-underline", "underline", "Underline",
 	DEF_TAB_UNDERLINE, Tk_Offset(Tab, underline), 0, 0},
     {TK_CONFIG_CUSTOM, "-window", "window", "Window",
@@ -918,7 +922,7 @@ static Tk_ImageChangedProc ImageChangedProc;
 static Blt_TileChangedProc TileChangedProc;
 static Blt_BindTagProc GetTags;
 static Blt_BindPickProc PickTab;
-static Tcl_IdleProc AdoptWindow;
+/* static Tcl_IdleProc AdoptWindow; */
 static Tcl_CmdProc TabsetCmd;
 
 static void widgetWorldChanged(ClientData clientData);
@@ -955,10 +959,10 @@ MakeTag(
  *----------------------------------------------------------------------
  */
 static void
-WorldToScreen(setPtr, x, y, xScreenPtr, yScreenPtr)
-    Tabset *setPtr;
-    int x, y;
-    int *xScreenPtr, *yScreenPtr;
+WorldToScreen(
+    Tabset *setPtr,
+    int x, int y,
+    int *xScreenPtr, int *yScreenPtr)
 {
     int sx, sy;
 
@@ -1011,8 +1015,7 @@ WorldToScreen(setPtr, x, y, xScreenPtr, yScreenPtr)
  *----------------------------------------------------------------------
  */
 static void
-EventuallyRedraw(setPtr)
-    Tabset *setPtr;
+EventuallyRedraw(Tabset *setPtr)
 {
     if ((setPtr->tkwin != NULL) && !(setPtr->flags & TABSET_REDRAW)) {
 	setPtr->flags |= TABSET_REDRAW;
@@ -1062,10 +1065,10 @@ EventuallyRedrawTearoff(tabPtr)
  */
 /* ARGSUSED */
 static void
-ImageChangedProc(clientData, x, y, width, height, imageWidth, imageHeight)
-    ClientData clientData;
-    int x, y, width, height;	/* Not used. */
-    int imageWidth, imageHeight;/* Not used. */
+ImageChangedProc(
+    ClientData clientData,
+    int x, int y, int width, int height,	/* Not used. */
+    int imageWidth, int imageHeight)/* Not used. */
 {
     Tabset *setPtr = clientData;
 
@@ -1145,9 +1148,9 @@ GetImage(
  *----------------------------------------------------------------------
  */
 static void
-FreeImage(setPtr, imagePtr)
-    Tabset *setPtr;
-    struct TabImageStruct *imagePtr;
+FreeImage(
+    Tabset *setPtr,
+    struct TabImageStruct *imagePtr)
 {
     imagePtr->refCount--;
     if (imagePtr->refCount == 0) {
@@ -2097,10 +2100,10 @@ GetTabByNameInd(setPtr, string, tabPtrPtr)
 }
 
 static int
-GetTabByIndName(setPtr, string, tabPtrPtr)
-Tabset *setPtr;
-char *string;
-Tab **tabPtrPtr;
+GetTabByIndName(
+    Tabset *setPtr,
+    char *string,
+    Tab **tabPtrPtr)
 {
     if (GetTabByIndex(setPtr, string, tabPtrPtr) == TCL_OK) {
         return TCL_OK;
@@ -3275,7 +3278,7 @@ ActivateOp(setPtr, interp, argc, argv)
 
     if (argv[2][0] == '\0') {
 	tabPtr = NULL;
-    } else if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_OK) != TCL_OK) {
+    } else if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if ((tabPtr != NULL) && (tabPtr->state == STATE_DISABLED)) {
@@ -3440,11 +3443,11 @@ DeleteOp(
     Tab *firstPtr, *lastPtr;
 
     lastPtr = NULL;
-    if (GetTabByIndName(setPtr, argv[2], &firstPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &firstPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if ((argc == 4) && 
-	(GetTabByIndName(setPtr, argv[3], &lastPtr, INVALID_FAIL) != TCL_OK)) {
+	(GetTabByIndName(setPtr, argv[3], &lastPtr) != TCL_OK)) {
 	return TCL_ERROR;
     }
     if (lastPtr == NULL) {
@@ -3501,7 +3504,7 @@ FocusOp(
 {
     Tab *tabPtr;
 
-    if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if (tabPtr != NULL) {
@@ -3541,6 +3544,7 @@ IndexOp(
 #define SEARCH_INDICES	2
 #define SEARCH_BOTH	3
     search = SEARCH_INDICES;
+    search = SEARCH_BOTH;
     if (argc == 4) {
 	if (strcmp(argv[2], "-index") == 0) {
 	    search = SEARCH_INDICES;
@@ -3602,7 +3606,7 @@ GetOp(
 {
     Tab *tabPtr;
 
-    if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_OK) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if (tabPtr == NULL) {
@@ -3661,7 +3665,7 @@ InsertOp(
     } else {
 	Tab *beforePtr;
 
-	if (GetTabByIndName(setPtr, argv[2], &beforePtr, INVALID_FAIL) 
+	if (GetTabByIndName(setPtr, argv[2], &beforePtr) 
 	    != TCL_OK) {
 	    result = TCL_ERROR;
 	    goto finish;
@@ -3827,7 +3831,7 @@ InvokeOp(
     Tab *tabPtr;
     char *command;
 
-    if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if ((tabPtr == NULL) || (tabPtr->state == STATE_DISABLED)) {
@@ -3870,7 +3874,7 @@ MoveOp(
     Tab *tabPtr, *linkPtr;
     int before;
 
-    if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if ((tabPtr == NULL) || (tabPtr->state == STATE_DISABLED)) {
@@ -3885,7 +3889,7 @@ MoveOp(
 	    "\": should be \"after\" or \"before\"", (char *)NULL);
 	return TCL_ERROR;
     }
-    if (GetTabByIndName(setPtr, argv[4], &linkPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[4], &linkPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if (tabPtr == linkPtr) {
@@ -4132,7 +4136,7 @@ SelectOp(
 {
     Tab *tabPtr;
 
-    if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_OK) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if ((tabPtr == NULL) || (tabPtr->state == STATE_DISABLED)) {
@@ -4202,6 +4206,8 @@ ViewOp(
 }
 
 
+#if 0
+/* OBSOLETE */
 static void
 AdoptWindow( ClientData clientData)
 {
@@ -4216,6 +4222,7 @@ AdoptWindow( ClientData clientData)
     Blt_RelinkWindow(tabPtr->tkwin, tabPtr->container, x, y);
     Tk_MapWindow(tabPtr->tkwin);
 }
+#endif
 
 static void
 DestroyTearoff(dataPtr)
@@ -4250,6 +4257,8 @@ DestroyTearoff(dataPtr)
     }
 }
 
+#if 0
+/* Obsolete. Now uses  "wm manage" */
 static int
 CreateTearoff(
     Tabset *setPtr,
@@ -4303,6 +4312,8 @@ CreateTearoff(
 #endif
     return TCL_OK;
 }
+#endif
+
 /*ARGSUSED*/
 static int
 SeeOp(
@@ -4314,7 +4325,7 @@ SeeOp(
     Tab *tabPtr;
     int left, right, width;
 
-    if (GetTabByIndName(setPtr, argv[2], &tabPtr, INVALID_OK) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
         return TCL_ERROR;
     }
     if (tabPtr == NULL) {
@@ -4598,7 +4609,7 @@ TabNumberOp(setPtr, interp, argc, argv)
     int n = 0;
     Blt_ChainLink *linkPtr;
 
-    if (GetTabByIndName(setPtr, argv[3], &tabPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[3], &tabPtr) != TCL_OK) {
         return TCL_ERROR;
     }
     for (linkPtr = Blt_ChainFirstLink(setPtr->chainPtr); linkPtr != NULL;
@@ -4634,7 +4645,7 @@ TabSelectOp(setPtr, interp, argc, argv)
     Tcl_DString dStr;
     Tab *tabPtr;
 
-    if (GetTabByIndName(setPtr, argv[3], &tabPtr, INVALID_FAIL) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[3], &tabPtr) != TCL_OK) {
         return TCL_ERROR;
     }
     
@@ -4656,7 +4667,7 @@ TabSelectOp(setPtr, interp, argc, argv)
  *
  * TabTearoffOp --
  *
- *	  .h tab tearoff index ?title?
+ *	  .h tearoff ?index?
  *
  *----------------------------------------------------------------------
  */
@@ -4669,51 +4680,88 @@ TabTearoffOp(setPtr, interp, argc, argv)
     char **argv;
 {
     Tab *tabPtr;
-    int result;
-    Tk_Window tkwin;
+    Tcl_DString dStr;
 
     if (argc<=3) {
         Blt_ChainLink *linkPtr;
-        Tcl_DString dStr;
         Tcl_DStringInit(&dStr);
 
         for (linkPtr = Blt_ChainFirstLink(setPtr->chainPtr); linkPtr != NULL;
-        linkPtr = Blt_ChainNextLink(linkPtr)) {
+            linkPtr = Blt_ChainNextLink(linkPtr)) {
             tabPtr = Blt_ChainGetValue(linkPtr);
-            if (tabPtr->container != NULL) {
+            if (tabPtr->tornWin != NULL) {
                 Tcl_DStringAppendElement(&dStr, tabPtr->name);
             }
         }
         Tcl_DStringResult(interp, &dStr);
         return TCL_OK;
     }
-    if (GetTabByIndName(setPtr, argv[3], &tabPtr, INVALID_OK) != TCL_OK) {
+    if (GetTabByIndName(setPtr, argv[3], &tabPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
-    if ((tabPtr == NULL) || (tabPtr->tkwin == NULL) ||
-	(tabPtr->state == STATE_DISABLED)) {
-	return TCL_OK;		/* No-op */
+    if (tabPtr == NULL) {
+        return TCL_OK;		/* No-op */
     }
-    if (argc == 4) {
-	Tk_Window parent;
+    if (tabPtr->tornWin != NULL) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(tabPtr->tornWin, -1));
+    } else {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(argv[0], -1));
+    }
+    return TCL_OK;
+}
 
-	parent = (tabPtr->container == NULL)
-	    ? setPtr->tkwin : tabPtr->container;
-	Tcl_SetResult(setPtr->interp, Tk_PathName(parent), TCL_VOLATILE);
-	return TCL_OK;
+/*
+ *----------------------------------------------------------------------
+ *
+ * TearoffOp --
+ *
+ *	  .h tearoff ?index ?tab? ?
+ *
+ *----------------------------------------------------------------------
+ */
+/*ARGSUSED*/
+static int
+TearoffOp(setPtr, interp, argc, argv)
+    Tabset *setPtr;
+    Tcl_Interp *interp;
+    int argc;			/* Not used. */
+    char **argv;
+{
+    Tab *tabPtr;
+    int result;
+    Tcl_DString dStr;
+
+    if (argc<=2) {
+        Blt_ChainLink *linkPtr;
+        Tcl_DStringInit(&dStr);
+
+        for (linkPtr = Blt_ChainFirstLink(setPtr->chainPtr); linkPtr != NULL;
+        linkPtr = Blt_ChainNextLink(linkPtr)) {
+            tabPtr = Blt_ChainGetValue(linkPtr);
+            if (tabPtr->tornWin != NULL) {
+                Tcl_DStringAppendElement(&dStr, tabPtr->name);
+            }
+        }
+        Tcl_DStringResult(interp, &dStr);
+        return TCL_OK;
+    }
+    if (GetTabByIndName(setPtr, argv[2], &tabPtr) != TCL_OK) {
+	return TCL_ERROR;
+    }
+    if ((tabPtr->state == STATE_DISABLED)) {
+	return TCL_OK;		/* No-op */
     }
     Tcl_Preserve(tabPtr);
     result = TCL_OK;
 
-    tkwin = Tk_NameToWindow(interp, argv[4], setPtr->tkwin);
     Tcl_ResetResult(interp);
 
-    if (tabPtr->container != NULL) {
-	Tcl_EventuallyFree(tabPtr, DestroyTearoff);
-    }
-    if ((tkwin != setPtr->tkwin) && (tabPtr->container == NULL)) {
-	result = CreateTearoff(setPtr, argv[4], tabPtr);
-    }
+    Tcl_DStringInit(&dStr);
+    Tcl_DStringAppendElement(&dStr, "::blt::TabsetTearoff");
+    Tcl_DStringAppendElement(&dStr, argv[0]);
+    Tcl_DStringAppendElement(&dStr, argv[2]);
+    result = Tcl_GlobalEval(interp,  Tcl_DStringValue(&dStr));
+    Tcl_DStringFree(&dStr);
     Tcl_Release(tabPtr);
     EventuallyRedraw(setPtr);
     return result;
@@ -4742,7 +4790,7 @@ static Blt_OpSpec tabOps[] =
     {"pageheight", 5, (Blt_Op)TabPageHeight, 3, 3, "", },
     {"pagewidth", 5, (Blt_Op)TabPageWidth, 3, 3, "", },
     {"select", 1, (Blt_Op)TabSelectOp, 4, 4, "nameOrIndex",},
-    {"tearoff", 1, (Blt_Op)TabTearoffOp, 3, 5, "index ?parent?",},
+    {"tearoff", 1, (Blt_Op)TabTearoffOp, 3, 4, "?index?",},
 };
 
 static int nTabOps = sizeof(tabOps) / sizeof(Blt_OpSpec);
@@ -6686,6 +6734,7 @@ static Blt_OpSpec tabsetOps[] =
     {"select", 3, (Blt_Op)SelectOp, 3, 3, "index",},
     {"size", 2, (Blt_Op)SizeOp, 2, 2, "",},
     {"tab", 1, (Blt_Op)TabOp, 2, 0, "oper args",},
+    {"tearoff", 1, (Blt_Op)TearoffOp, 2, 3, "?index?",},
     {"view", 1, (Blt_Op)ViewOp, 2, 5,
 	"?moveto fract? ?scroll number what?",},
 };

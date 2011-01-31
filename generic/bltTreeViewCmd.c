@@ -48,7 +48,7 @@
 #define CLAMP(val,low,hi)	\
 	(((val) < (low)) ? (low) : ((val) > (hi)) ? (hi) : (val))
 
-static TreeViewCompareProc ExactCompare, GlobCompare, RegexpCompare;
+static TreeViewCompareProc ExactCompare, GlobCompare, RegexpCompare, InlistCompare;
 static TreeViewApplyProc ShowEntryApplyProc, HideEntryApplyProc, 
 	MapAncestorsApplyProc, FixSelectionsApplyProc;
 static Tk_LostSelProc LostSelection;
@@ -2123,10 +2123,10 @@ DrawButton(tvPtr, entryPtr)
     width = tvPtr->button.width;
     height = tvPtr->button.height;
 
-    top = tvPtr->titleHeight + tvPtr->inset;
-    bottom = Tk_Height(tvPtr->tkwin) - tvPtr->inset;
-    left = tvPtr->inset;
-    right = Tk_Width(tvPtr->tkwin) - tvPtr->inset;
+    top = tvPtr->titleHeight + tvPtr->insetY;
+    bottom = Tk_Height(tvPtr->tkwin) - tvPtr->insetY;
+    left = tvPtr->insetX;
+    right = Tk_Width(tvPtr->tkwin) - tvPtr->insetX;
 
     if (((dx + width) < left) || (dx > right) ||
 	((dy + height) < top) || (dy > bottom)) {
@@ -3642,12 +3642,13 @@ EntryOp(tvPtr, interp, objc, objv)
 
 /*ARGSUSED*/
 static int
-ExactCompare(interp, name, pattern, nocase)
+ExactCompare(interp, name, patternPtr, nocase)
     Tcl_Interp *interp;		/* Not used. */
     char *name;
-    char *pattern;
+    Tcl_Obj *patternPtr;
     int nocase;
 {
+    char *pattern = Tcl_GetString(patternPtr);
     if (!nocase) {
         return (strcmp(name, pattern) == 0);
     } else {
@@ -3657,40 +3658,75 @@ ExactCompare(interp, name, pattern, nocase)
 
 /*ARGSUSED*/
 static int
-GlobCompare(interp, name, pattern, nocase)
+GlobCompare(interp, name, patternPtr, nocase)
     Tcl_Interp *interp;		/* Not used. */
     char *name;
-    char *pattern;
+    Tcl_Obj *patternPtr;
     int nocase;
 {
+    char *pattern = Tcl_GetString(patternPtr);
     return Tcl_StringCaseMatch(name, pattern, nocase);
 }
 
 static int
-RegexpCompare(interp, name, pattern, nocase)
+RegexpCompare(interp, name, patternPtr, nocase)
     Tcl_Interp *interp;
     char *name;
-    char *pattern;
+    Tcl_Obj *patternPtr;
     int nocase;
 {
     Tcl_DString dStr;
     int len, i, result;
     char *cp;
     
+    Tcl_Obj *namePtr;
     if (!nocase) {
-        return Tcl_RegExpMatch(interp, name, pattern);
+        namePtr = Tcl_NewStringObj(name, -1);
+        result = Tcl_RegExpMatchObj(interp, namePtr, patternPtr);
+    } else {
+        len = strlen(name);
+        Tcl_DStringInit(&dStr);
+        Tcl_DStringSetLength(&dStr, len + 1);
+        cp = Tcl_DStringValue(&dStr);
+        for (i=0; i<len; i++) {
+            cp[i] = tolower(name[i]);
+        }
+        cp[len] = 0;
+        namePtr = Tcl_NewStringObj(cp, len);
+        result = Tcl_RegExpMatchObj(interp, namePtr, patternPtr);
+        Tcl_DStringFree(&dStr);
     }
-    len = strlen(name);
-    Tcl_DStringInit(&dStr);
-    Tcl_DStringSetLength(&dStr, len + 1);
-    cp = Tcl_DStringValue(&dStr);
-    for (i=0; i<len; i++) {
-        cp[i] = tolower(name[i]);
-    }
-    cp[len] = 0;
-    result = Tcl_RegExpMatch(interp, cp, pattern);
-    Tcl_DStringFree(&dStr);
+    Tcl_DecrRefCount(namePtr);
     return result;
+}
+
+static int
+InlistCompare(interp, name, patternPtr, nocase)
+    Tcl_Interp *interp;		/* Not used. */
+    char *name;
+    Tcl_Obj *patternPtr;
+    int nocase;
+{
+    Tcl_Obj **objv;
+    int objc, i;
+    char *pattern;
+             
+    if (Tcl_ListObjGetElements(interp, patternPtr, &objc, &objv) != TCL_OK) {
+        return 1;
+    }
+    for (i = 0; i < objc; i++) {
+        pattern = Tcl_GetString(objv[i]);
+        if (!nocase) {
+            if (strcmp(name, pattern) == 0) {
+                return 1;
+            }
+        } else {
+            if (strcasecmp(name, pattern) == 0) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 /*
@@ -3717,8 +3753,8 @@ FindOp(tvPtr, interp, objc, objv)
     TreeViewCompareProc *compareProc;
     TreeViewIterProc *nextProc;
     int invertMatch;		/* normal search mode (matching entries) */
-    char *namePattern/*, *fullPattern*/;
-    char *pattern, *string, *addTag, *withTag, *withoutTag, *curValue;
+    Tcl_Obj *namePattern/*, *fullPattern*/;
+    char *string, *addTag, *withTag, *withoutTag, *curValue;
     register int i;
     Blt_List options;
     Blt_ListNode node;
@@ -3732,12 +3768,17 @@ FindOp(tvPtr, interp, objc, objv)
     int nMatches, maxMatches, result, length, ocnt, useformat,userow, isvis;
     int depth, maxdepth, mindepth, mask, istree, isleaf, invis, ismap, uselabel;
     int isopen, isclosed, notop, nocase, isfull, cmdLen, docount, optInd, reldepth;
-    int isnull, retLabel, isret;
+    int isnull, retLabel, isret, cmdValue;
     char *colStr, *keysub;
+    Tcl_Obj *cmdObj, *cmdArgs;
+    Tcl_Obj **aobjv;
+    int aobjc;
 
     enum optInd {
-        OP_ADDTAG, OP_AFTER, OP_COMMAND, OP_COLUMN, OP_COUNT, OP_DEPTH, OP_EXACT,
-        OP_EXEC, OP_GLOB, OP_INVERT, OP_ISCLOSED, OP_ISNULL, OP_ISHIDDEN,
+        OP_ADDTAG, OP_AFTER, OP_CMDARGS,
+        OP_COMMAND, OP_COLUMN, OP_COUNT, OP_DEPTH, OP_EXACT,
+        OP_EXEC, OP_GLOB, OP_INLIST,
+        OP_INVERT, OP_ISCLOSED, OP_ISNULL, OP_ISHIDDEN,
         OP_ISLEAF, OP_ISMAPPED, OP_ISOPEN, OP_ISTREE, OP_LIMIT,
         OP_MAXDEPTH, OP_MINDEPTH, OP_NAME, OP_NOCASE, OP_NOTOP,
         OP_OPTION, OP_REGEXP, OP_RELDEPTH, OP_RETURN, OP_TOP,
@@ -3745,8 +3786,9 @@ FindOp(tvPtr, interp, objc, objv)
         OP_VAR, OP_VISIBLE, OP_WITHTAG, OP_WITHOUTTAG
     };
     static char *optArr[] = {
-        "-addtag",  "-after", "-command", "-column", "-count", "-depth", "-exact",
-        "-exec", "-glob", "-invert", "-isclosed", "-isempty", "-ishidden",
+        "-addtag",  "-after", "-cmdargs",
+        "-command", "-column", "-count", "-depth", "-exact",
+        "-exec", "-glob", "-inlist", "-invert", "-isclosed", "-isempty", "-ishidden",
         "-isleaf", "-ismapped", "-isopen", "-istree", "-limit",
         "-maxdepth", "-mindepth", "-name", "-nocase", "-notop",
         "-option", "-regexp", "-reldepth", "-return", "-top",
@@ -3773,6 +3815,10 @@ FindOp(tvPtr, interp, objc, objv)
     reldepth = notop = 0;
     nocase = 0, isfull = 0, useformat = 0;
     keysub = colStr = NULL;
+    cmdValue = 0;
+    curValue = NULL;
+    cmdObj = NULL;
+    cmdArgs = NULL;
 
     entryPtr = tvPtr->rootPtr;
     Blt_TreeViewOptsInit(tvPtr);
@@ -3845,6 +3891,9 @@ FindOp(tvPtr, interp, objc, objv)
 	    mask = ENTRY_MASK;
 	    isvis = 1;
 	    break;
+        case OP_INLIST:
+	    compareProc = InlistCompare;
+	    break;
         case OP_REGEXP:
 	    compareProc = RegexpCompare;
 	    break;
@@ -3912,7 +3961,7 @@ FindOp(tvPtr, interp, objc, objv)
 	    break;
         case OP_NAME:
 	    if (++i >= objc) { goto missingArg; }
-	    namePattern = Tcl_GetString(objv[i]);
+	    namePattern = objv[i];
 	    break;
         case OP_LIMIT:
 	    if (++i >= objc) { goto missingArg; }
@@ -3945,16 +3994,21 @@ FindOp(tvPtr, interp, objc, objv)
              }
              break;
              
-        case OP_COMMAND:
-            if (++i >= objc) { goto missingArg; }
-            command = Tcl_DuplicateObj(objv[i]);
-            Tcl_IncrRefCount(command);
-            iObj = Tcl_NewIntObj(0);
-            if (Tcl_ListObjAppendElement(interp, command, iObj) != TCL_OK) {
-                Tcl_DecrRefCount(iObj);
+        case OP_CMDARGS:
+            if (cmdArgs != NULL) {
+                Tcl_AppendResult(interp, "duplicate -cmdargs", 0);
                 goto error;
             }
-            Tcl_ListObjLength(interp, command, &cmdLen);
+            if (++i >= objc) { goto missingArg; }
+            cmdArgs = objv[i];
+            break;
+        case OP_COMMAND:
+            if (cmdObj != NULL) {
+                Tcl_AppendResult(interp, "duplicate -command", 0);
+                goto error;
+            }
+            if (++i >= objc) { goto missingArg; }
+            cmdObj = objv[i];
 	    break;
 	    
         case OP_DEPTH:
@@ -4028,6 +4082,36 @@ FindOp(tvPtr, interp, objc, objv)
         Tcl_AppendResult(interp, "can not use -count & -return", (char *)NULL);
         goto error;
     }
+    if (cmdObj != NULL) {
+        command = Tcl_DuplicateObj(cmdObj);
+        Tcl_IncrRefCount(command);
+        iObj = Tcl_NewIntObj(0);
+        if (Tcl_ListObjAppendElement(interp, command, iObj) != TCL_OK) {
+            Tcl_DecrRefCount(iObj);
+            goto error;
+        }
+        Tcl_ListObjLength(interp, command, &cmdLen);
+        aobjc = 0;
+        if (cmdArgs != NULL) {
+            int ai;
+            if (Tcl_ListObjGetElements(interp, cmdArgs, &aobjc, &aobjv) != TCL_OK) {
+                goto error;
+            }
+            for (ai = 0; ai < aobjc; ai++) {
+                TreeViewColumn *sretColPtr;
+                if (Blt_TreeViewGetColumn(interp, tvPtr, aobjv[ai], &sretColPtr) != TCL_OK) {
+                    goto error;
+                }
+                
+                iObj = Tcl_NewStringObj("",-1);
+                if (Tcl_ListObjAppendElement(interp, command, iObj) != TCL_OK) {
+                    Tcl_DecrRefCount(iObj);
+                    goto error;
+                }
+            }
+        }
+    }
+    
     if (columnPtr) {
         if (namePattern && (userow|isfull)) {
             Tcl_AppendResult(interp, "can not use -usepath|-userow & -column", (char *)NULL);
@@ -4252,15 +4336,15 @@ dochecks:
         ocnt = 0;
         for (node = Blt_ListFirstNode(options); node != NULL;
 	    node = Blt_ListNextNode(node)) {
+	    Tcl_Obj *kPtr;
 	    ocnt++;
-	    objPtr = (Tcl_Obj *)Blt_ListGetKey(node);
+	    kPtr = (Tcl_Obj *)Blt_ListGetKey(node);
 	    Tcl_ResetResult(interp);
 	    Blt_ConfigureValueFromObj(interp, tvPtr->tkwin, 
-		bltTreeViewEntrySpecs, (char *)entryPtr, objPtr, 0);
+		bltTreeViewEntrySpecs, (char *)entryPtr, kPtr, 0);
             Blt_TreeViewOptsInit(tvPtr);
-	    pattern = Blt_ListGetValue(node);
 	    objPtr = Tcl_GetObjResult(interp);
-	    result = (*compareProc) (interp, Tcl_GetString(objPtr), pattern, nocase);
+	    result = (*compareProc) (interp, Tcl_GetString(objPtr), kPtr, nocase);
            if (result == invertMatch) {
                break;
            }
@@ -4312,18 +4396,49 @@ dochecks:
 	}
 	if (command != NULL) {
              Tcl_Obj **cobjv;
-             int cobjc;
+             int cobjc, ai;
              
              iObj = Tcl_NewIntObj(Blt_TreeNodeId(entryPtr->node));
-             if (Tcl_ListObjReplace(interp, command, cmdLen-1, 1, 1, &iObj) != TCL_OK ||
-             Tcl_ListObjGetElements(interp, command, &cobjc, &cobjv) != TCL_OK) {
+             if (Tcl_ListObjReplace(interp, command, cmdLen-1, 1, 1, &iObj) != TCL_OK) {
+                 Tcl_Release(entryPtr);
+                 goto error;
+             }
+             for (ai = 0; ai < aobjc; ai++) {
+                 if (Blt_TreeGetValue(NULL, tvPtr->tree, entryPtr->node,
+                    Tcl_GetString(aobjv[ai]), &iObj) != TCL_OK) {
+                    iObj = Tcl_NewStringObj("", 0);
+                 }
+                 if (Tcl_ListObjReplace(interp, command, cmdLen+ai, 1, 1, &iObj) != TCL_OK) {
+                     Tcl_Release(entryPtr);
+                     goto error;
+                 }
+             }
+             if (Tcl_ListObjGetElements(interp, command, &cobjc, &cobjv) != TCL_OK) {
                  Tcl_Release(entryPtr);
                  goto error;
              }
              result = Tcl_EvalObjv(interp, cobjc, cobjv, 0);
              if ((entryPtr->flags & ENTRY_DELETED) || (tvPtr->flags & TV_DELETED)) {
                   result = TCL_ERROR;
+             } else if (result == TCL_RETURN) {
+                 int eRes;
+                 if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp),
+                     &eRes) != TCL_OK) {
+                     result = TCL_ERROR;
+                     goto error;
+                 }
+                 result = TCL_OK;
+                 if (eRes != 0) {
+                     if (!docount) {
+                        objPtr = NodeToObj(entryPtr->node);
+                        Tcl_ListObjAppendElement(interp, listObjPtr, objPtr);
+                     }
+                     goto finishnode;
+                 } else {
+                     goto nextEntry;
+                 }
              }
+             
              if (result != TCL_OK) {
                  Tcl_Release(entryPtr);
                  goto error;
@@ -4544,7 +4659,7 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
 {
     TreeViewCompareProc *compareProc;
     int invertMatch;		/* normal search mode (matching entries) */
-    char *namePattern;
+    Tcl_Obj *namePattern;
     register int i;
     int length, depth = -1, maxdepth = -1, mindepth = -1, noArgs, usefull = 0;
     int result, nocase, uselabel = 0, optInd, ocnt;
@@ -4560,13 +4675,13 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
     Tcl_DString fullName;
 
     enum optInd {
-        OP_COLUMN, OP_DEPTH, OP_EXACT, OP_GLOB, OP_INVERT,
+        OP_COLUMN, OP_DEPTH, OP_EXACT, OP_GLOB, OP_INLIST, OP_INVERT,
         OP_MAXDEPTH, OP_MINDEPTH, OP_NAME, OP_NOCASE, OP_OPTION,
         OP_REGEXP, OP_USELABEL, OP_USEPATH,
         OP_WITHTAG, OP_WITHOUTTAG
     };
     static char *optArr[] = {
-        "-column", "-depth", "-exact", "-glob", "-invert",
+        "-column", "-depth", "-exact", "-glob", "-inlist", "-invert",
         "-maxdepth", "-mindepth", "-name", "-nocase", "-option",
         "-regexp", "-uselabel", "-usepath",
         "-withtag", "-withouttag",
@@ -4614,6 +4729,9 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
         case OP_REGEXP:
 	    compareProc = RegexpCompare;
 	    break;
+        case OP_INLIST:
+	    compareProc = InlistCompare;
+	    break;
         case OP_GLOB:
 	    compareProc = GlobCompare;
 	    break;
@@ -4637,7 +4755,7 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
 	    
         case OP_NAME:
 	    if (++i >= objc) { goto missingArg; }
-	    namePattern = Tcl_GetString(objv[i]);
+	    namePattern = objv[i];
 	    break;
 	    
         case OP_WITHOUTTAG:
@@ -4782,7 +4900,7 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
 		}
 	    }
 	    if (withoutTag != NULL) {
-		result = Blt_TreeHasTag(tvPtr->tree, entryPtr->node, withTag);
+		result = Blt_TreeHasTag(tvPtr->tree, entryPtr->node, withoutTag);
 		if (result) {
 		    continue;	/* Failed to match */
 		}
@@ -4790,25 +4908,26 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
 	    ocnt = 0;
 	    for (node = Blt_ListFirstNode(options); node != NULL;
 		node = Blt_ListNextNode(node)) {
+		Tcl_Obj *kPtr;
 		ocnt++;
-		objPtr = (Tcl_Obj *)Blt_ListGetKey(node);
+		kPtr = (Tcl_Obj *)Blt_ListGetKey(node);
 		Tcl_ResetResult(interp);
                 Blt_TreeViewOptsInit(tvPtr);
                 if (Blt_ConfigureValueFromObj(interp, tvPtr->tkwin, 
-			bltTreeViewEntrySpecs, (char *)entryPtr, objPtr, 0) 
+			bltTreeViewEntrySpecs, (char *)entryPtr, kPtr, 0) 
 		    != TCL_OK) {
 		    goto error;	/* This shouldn't happen. */
 		}
 		pattern = Blt_ListGetValue(node);
 		objPtr = Tcl_GetObjResult(interp);
-		result = (*compareProc)(interp, Tcl_GetString(objPtr), pattern, nocase);
+		result = (*compareProc)(interp, Tcl_GetString(objPtr), kPtr, nocase);
 		if (result == invertMatch) {
 		    break;	/* Failed to match */
 		}
 	    }
-            if (result == invertMatch) {
-                continue;	/* Failed to match */
-            }
+            /* if (result == invertMatch) {
+                continue;
+            }*/
             /* Finally, apply the procedure to the node */
 	    (*proc) (tvPtr, entryPtr);
 	}
@@ -5812,7 +5931,7 @@ NearestOp(tvPtr, interp, objc, objv)
 	where = "";
 	
         if ((tvPtr->flags & TV_SHOW_COLUMN_TITLES)
-             && oy<(tvPtr->inset+tvPtr->titleHeight)) {
+             && oy<(tvPtr->insetY+tvPtr->titleHeight)) {
             TreeViewColumn *cPtr = columnPtr;
             
             ly = oy;

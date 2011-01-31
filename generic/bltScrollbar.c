@@ -353,12 +353,13 @@ widgetWorldChanged(ClientData clientData)
 
 /*ARGSUSED*/
 static int
-ScrollbarCmd(clientData, interp, argc, argv)
+scrollbarCmd(clientData, interp, argc, argv, stype)
     ClientData clientData;	/* Main window associated with
 				 * interpreter. */
     Tcl_Interp *interp;		/* Current interpreter. */
     int argc;			/* Number of arguments. */
     char **argv;		/* Argument strings. */
+    int stype;
 {
     register Scrollbar *scrollPtr;
     Tk_Window tkwin;
@@ -424,7 +425,11 @@ ScrollbarCmd(clientData, interp, argc, argv)
     scrollPtr->flags = 0;
     scrollPtr->tile = scrollPtr->tile2 = scrollPtr->activeTile = NULL;
 
-    Tk_SetClass(scrollPtr->tkwin, "Scrollbar");
+    if (stype) {
+        Tk_SetClass(scrollPtr->tkwin, "BScrollbar");
+    } else {
+        Tk_SetClass(scrollPtr->tkwin, "Scrollbar");
+    }
     Tk_SetClassProcs(tkwin, &scrollClass, (ClientData)scrollPtr);
     Tk_CreateEventHandler(scrollPtr->tkwin,
 	ExposureMask | StructureNotifyMask | FocusChangeMask,
@@ -438,6 +443,28 @@ ScrollbarCmd(clientData, interp, argc, argv)
   error:
     Tk_DestroyWindow(scrollPtr->tkwin);
     return TCL_ERROR;
+}
+
+static int
+BScrollbarCmd(clientData, interp, argc, argv)
+    ClientData clientData;	/* Main window associated with
+				 * interpreter. */
+    Tcl_Interp *interp;		/* Current interpreter. */
+    int argc;			/* Number of arguments. */
+    char **argv;		/* Argument strings. */
+{
+    return scrollbarCmd(clientData, interp, argc, argv, 1);
+}
+
+static int
+ScrollbarCmd(clientData, interp, argc, argv)
+    ClientData clientData;	/* Main window associated with
+				 * interpreter. */
+    Tcl_Interp *interp;		/* Current interpreter. */
+    int argc;			/* Number of arguments. */
+    char **argv;		/* Argument strings. */
+{
+    return scrollbarCmd(clientData, interp, argc, argv, 0);
 }
 
 /*
@@ -1532,19 +1559,13 @@ int
 Blt_ScrollbarInit(interp)
     Tcl_Interp *interp;
 {
-    static Blt_CmdSpec cmdSpec =
+    static Blt_CmdSpec cmdSpecs[2] =
     {
-#if HAVE_NAMESPACES
-	"scrollbar", ScrollbarCmd,
-#else
-	"tilescrollbar", ScrollbarCmd,
-#endif /* HAVE_NAMESPACES */
+	{ "scrollbar", ScrollbarCmd, },
+	{ "bscrollbar", BScrollbarCmd, },
     };
 
-    if (Blt_InitCmd(interp, "blt::tile", &cmdSpec) == NULL) {
-	return TCL_ERROR;
-    }
-    return TCL_OK;
+    return Blt_InitCmds(interp, "blt::tile", cmdSpecs, 2);
 }
 
 #endif /* NO_TILESCROLLBAR */

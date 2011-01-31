@@ -489,6 +489,16 @@ typedef struct {
 #define FILL_Y		2
 #define FILL_BOTH	3
 
+#ifndef TK_BGTILE_TOP
+#define TK_BGTILE_TOP 0x2000000
+#endif
+
+#ifndef Tk_IsBgTileTop
+#define Tk_IsBgTileTop(tkwin) \
+    (((Tk_FakeWin *) (tkwin))->flags & TK_BGTILE_TOP)
+#endif
+
+
 /*
  * ----------------------------------------------------------------------
  *

@@ -68,7 +68,7 @@ winop \- Perform assorted window and image operations
 .sp
 \fBwinop raise\fR ?\fIwindow\fR?...
 .sp
-\fBwinop snap \fIwindow photoName\fR
+\fBwinop snap \fIwindow photoName\fR ?\fIwidth height\fR ?
 .sp
 \fBwinop unmap\fR ?\fIwindow\fR?...
 .sp
@@ -224,15 +224,6 @@ may be the same.
 .TP
 \fBwinop image subsample\fR \fIsrcImage\fR \fIdestImage\fR \fIx\fR \fIy\fR \fIwidth\fR \fIheight\fR ?\fIhorizFilter\fR? ?\fIvertFilter\fR?
 Resample area of an image.  See resample.
-.TP
-\fBwinop image snap \fIwindow photoName\fR
-Takes a snapshot of the \fIwindow\fR and stores the contents in the
-photo image \fIphotoName\fR. \fIWindow\fR is the valid path name of a
-Tk window which must be totally visible (unobscured).  \fIPhotoName\fR
-is the name of a Tk photo image which must already exist.  This command
-can fail if the window is obscured in any fashion, such as covered by 
-another window or partially offscreen.  In that case, an error message
-is returned.
 .RE
 .TP
 \fBwinop lower\fR ?\fIwindow\fR?...
@@ -256,6 +247,16 @@ Query pointer position.  Returns @X,Y.
 \fBwinop raise\fR ?\fIwindow\fR?...
 Raises \fIwindow\fR to the top of the X window stack. \fIWindow\fR must be
 a valid path name of a Tk window.  This command returns the empty string.
+.TP
+\fBwinop snap \fIwindow photoName\fR ?\fIwidth height\fR?
+Takes a snapshot of the \fIwindow\fR and stores the contents in the
+photo image \fIphotoName\fR. \fIWindow\fR is the valid path name of a
+Tk window which must be totally visible (unobscured).  \fIPhotoName\fR
+is the name of a Tk photo image which must already exist.  This command
+can fail if the window is obscured in any fashion, such as covered by 
+another window or partially offscreen.  In that case, an error message
+is returned.  If \fIwidth\fR or \fIheight\fR is given, the image is
+resampled to the given size.
 .TP
 \fBwinop unmap\fR ?\fIwindow\fR?...
 Unmaps \fIwindow\fR from the screen. \fIWindow\fR is the path name of a Tk

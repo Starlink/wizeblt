@@ -30,6 +30,7 @@ miscFiles     = \
 		tabset.tcl \
 		treeview.tcl \
 		tvutil.tcl \
+		init.tcl \
 		tclIndex \
 		$(cursors)
 

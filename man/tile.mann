@@ -116,15 +116,6 @@ displayed.  The default is \fB""\fR.
 \fB\-shadow \fIshadow\fR 
 Set shadow for text.
 .TP
-\fB\-innerbg \fIcolor\fR
-The background color inside of the bdimage.
-.TP
-\fB\-innertile \fIimage\fR
-The tile image for inside of the bdimage.
-.TP
-\fB\-disabledtile \fIimage\fR
-The tile image when state is disabled.
-.TP
 \fB\-rotate \fIdegrees\fR
 Support for rotating text in degrees, eg. 90, 180.
 .TP
@@ -144,7 +135,7 @@ The next three repeat but for the disabled state.
 \fB\-disabledbdimage \fIimage\fR
 A border image that resizes to fit the widget.
 .TP
-\fB\-bdmaskcolor \fIcolor\fR
-Color to use in bdimage for filling interior.
+\fB\-bdflags \fIint\fR
+Set to -1 to perform inner rather than outer mirror.
 .SH KEYWORDS
 tile, texture, button, label, radiobutton, checkbutton, scrollbar, frame, toplevel

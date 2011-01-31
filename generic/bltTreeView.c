@@ -44,7 +44,6 @@
 #define FOCUS_WIDTH		1
 #define ICON_PADX		2
 #define ICON_PADY		1
-#define INSET_PAD		0
 #define LABEL_PADX		3
 #define LABEL_PADY		0
 
@@ -512,6 +511,12 @@ Blt_ConfigSpec bltTreeViewSpecs[] =
 	DEF_TV_OPENANCHOR, Blt_Offset(TreeView, openAnchor), BLT_CONFIG_NULL_OK},
     {BLT_CONFIG_STRING, "-opencommand", "openCommand", "OpenCommand",
 	(char *)NULL, Blt_Offset(TreeView, openCmd), BLT_CONFIG_NULL_OK},
+#if 1
+    {BLT_CONFIG_DISTANCE, "-padx", "padX", "Pad",
+	"0", Blt_Offset(TreeView, padX), 0},
+    {BLT_CONFIG_DISTANCE, "-pady", "padY", "Pad",
+	"0", Blt_Offset(TreeView, padY), 0},
+#endif
     {BLT_CONFIG_RELIEF, "-relief", "relief", "Relief",
 	DEF_TV_RELIEF, Blt_Offset(TreeView, relief), 0},
     {BLT_CONFIG_CURSOR, "-resizecursor", "resizeCursor", "ResizeCursor",
@@ -4019,7 +4024,8 @@ Blt_TreeViewUpdateWidget(Tcl_Interp *interp, TreeView *tvPtr)
     tvPtr->focusGC = newGC;
 
     Blt_TreeViewConfigureButtons(tvPtr);
-    tvPtr->inset = tvPtr->highlightWidth + tvPtr->borderWidth + INSET_PAD;
+    tvPtr->insetX = tvPtr->highlightWidth + tvPtr->borderWidth + tvPtr->padX;
+    tvPtr->insetY = tvPtr->highlightWidth + tvPtr->borderWidth + tvPtr->padY;
 
     setupTree = FALSE;
 
@@ -4062,7 +4068,7 @@ Blt_TreeViewUpdateWidget(Tcl_Interp *interp, TreeView *tvPtr)
      * These options change the layout of the box.  Mark the widget for update.
      */
     if (setupTree == FALSE && Blt_ObjConfigModified(bltTreeViewSpecs, interp,
-        "-font", "-title*",
+        "-font", "-title*", "-pad*",
 	"-linespacing", "-*width", "-height", "-hide*", "-flat",
 	"-show*", "-icons", "-activeicons", "-leaficons", "-minheight",
 	"-*style", "-levelstyles", "-fillnull", "-levelpad", "-formatcmd",
@@ -4773,7 +4779,7 @@ ComputeVisibleEntries(TreeView *tvPtr)
     tvPtr->nVisible = 0;
     tvPtr->nAbove = 0;
     nAbove = 0;
-    height = VPORTHEIGHT(tvPtr);
+    height = VPORTHEIGHT(tvPtr) - tvPtr->insetY;
     if (height<=1) return TCL_OK;
 
     /* Allocate worst case number of slots for entry array. */
@@ -4990,12 +4996,15 @@ DrawVerticals(
 	/*
 	 * Clip the line's Y-coordinates at the viewport borders.
 	 */
+	if (y1a <= tvPtr->insetY) {
+	    y1a = tvPtr->insetY+1;
+	}
 	if (y1a < 0) {
 	    y1a = (y1a & 0x1);	/* Make sure the dotted line starts on 
 				 * the same even/odd pixel. */
 	}
-	if (y2 > Tk_Height(tvPtr->tkwin)) {
-	    y2 = Tk_Height(tvPtr->tkwin);
+	if (y2 > (Tk_Height(tvPtr->tkwin)-tvPtr->insetY)) {
+             y2 = (Tk_Height(tvPtr->tkwin)-tvPtr->insetY);
 	}
 	if ((y1a < Tk_Height(tvPtr->tkwin)) && (y2 > 0)) {
 	    XDrawLine(tvPtr->display, drawable, tvPtr->lineGC, 
@@ -5017,8 +5026,8 @@ Blt_TreeViewDrawRule(
     x = SCREENX(tvPtr, columnPtr->worldX) + 
 	columnPtr->width + tvPtr->ruleMark - tvPtr->ruleAnchor - 1;
 
-    y1a = tvPtr->titleHeight + tvPtr->inset;
-    y2 = Tk_Height(tvPtr->tkwin) - tvPtr->inset;
+    y1a = tvPtr->titleHeight + tvPtr->insetY;
+    y2 = Tk_Height(tvPtr->tkwin) - tvPtr->insetY*2;
     XDrawLine(tvPtr->display, drawable, columnPtr->ruleGC, x, y1a, x, y2);
     tvPtr->flags = TOGGLE(tvPtr->flags, TV_RULE_ACTIVE);
 }
@@ -5350,8 +5359,8 @@ Blt_TreeViewDrawIcon(
 	    x += (ICONWIDTH(level + 1) - width) / 2;
 	}	    
 	y += (entryHeight - height + tvPtr->leader) / 2;
-	botInset = tvPtr->inset - INSET_PAD;
-	topInset = tvPtr->titleHeight + tvPtr->inset;
+	botInset = tvPtr->insetY;
+	topInset = tvPtr->titleHeight + tvPtr->insetY;
 	maxY = Tk_Height(tvPtr->tkwin) - botInset;
 	left = 0;
 	top = 0;
@@ -5363,13 +5372,13 @@ Blt_TreeViewDrawIcon(
 	} else if (bottom >= maxY) {
 	    height = maxY - y;
 	}
-	if (x<tvPtr->inset) {
-	    int dif=(tvPtr->inset-x);
-	    x = tvPtr->inset;
+	if (x<tvPtr->insetX) {
+	    int dif=(tvPtr->insetX-x);
+	    x = tvPtr->insetX;
 	    left += dif;
 	    width -= dif;
 	}
-         cend = tvPtr->treeColumn.worldX + tvPtr->treeColumn.width - tvPtr->xOffset - tvPtr->treeColumn.borderWidth + tvPtr->inset;
+         cend = tvPtr->treeColumn.worldX + tvPtr->treeColumn.width - tvPtr->xOffset - tvPtr->treeColumn.borderWidth + tvPtr->insetX;
          if ((x+width)>cend) {
              if (x>cend) {
                  return (icon != NULL);
@@ -5740,6 +5749,9 @@ DrawTreeEntry(
 	 * Entry is open, draw vertical line.
 	 */
 	y2 = y1a + entryPtr->vertLineLength;
+	if (y1a < tvPtr->insetY) {
+	    y1a = tvPtr->insetY;
+	}
 	if (y2 > Tk_Height(tvPtr->tkwin)) {
 	    y2 = Tk_Height(tvPtr->tkwin); /* Clip line at window border. */
 	}
@@ -5867,6 +5879,9 @@ DrawTitle(
     int x0, cx, xOffset;
     TreeViewStyle *sPtr;
     TreeViewIcon icon;
+    int mw, mh;
+    mw = Tk_Width(tvPtr->tkwin) - tvPtr->padX;
+    mh = Tk_Height(tvPtr->tkwin) - tvPtr->padY;
 
     if (tvPtr->titleHeight < 1) {
 	return;
@@ -5877,10 +5892,16 @@ DrawTitle(
     cx = x;
     if (columnPtr->position == Blt_ChainGetLength(tvPtr->colChainPtr)) {
 	/* If there's any room left over, let the last column take it. */
-	columnWidth = Tk_Width(tvPtr->tkwin) - x;
+	columnWidth = Tk_Width(tvPtr->tkwin) - x - tvPtr->padX;
     } else if (columnPtr->position == 1) {
 	columnWidth += x;
-	cx = 0;
+	cx = tvPtr->padX;
+    }
+    if ((x + columnWidth) > mw) {
+        columnWidth = (mw - x);
+    }
+    if (columnWidth<2) {
+        columnWidth = 2;
     }
     x0 = x + columnPtr->borderWidth;
 
@@ -5904,7 +5925,7 @@ DrawTitle(
 	fgColor = (sPtr && sPtr->fgColor)?sPtr->fgColor:columnPtr->titleFgColor;
     }
     Blt_TreeViewFill3DTile(tvPtr, drawable, border, cx + 1, 
-	tvPtr->inset + 1, columnWidth - 2, tvPtr->titleHeight - 2, 0, 
+	tvPtr->insetY + 1, columnWidth - 2, tvPtr->titleHeight - 2, 0, 
          TK_RELIEF_FLAT, sPtr ? sPtr->tile : NULL, 0, 1);
     if (Blt_HasTile(tvPtr->tile) && !columnPtr->hasttlbg) {
         if (tvPtr->scrollTile) {
@@ -5914,7 +5935,7 @@ DrawTitle(
             Blt_SetTileOrigin(tvPtr->tkwin, tvPtr->tile, 0, 0);
         }
         Blt_TileRectangle(tvPtr->tkwin, drawable, tvPtr->tile, cx + 1, 
-	   tvPtr->inset + 1, columnWidth - 2, tvPtr->titleHeight - 2);
+	   tvPtr->insetY + 1, columnWidth - 2, tvPtr->titleHeight - 2);
     }
     width = columnPtr->width;
     xOffset = x0 + columnPtr->pad.side1 + 1;
@@ -5953,7 +5974,7 @@ DrawTitle(
 	if (columnPtr->titleTextPtr != NULL) {
 	    iconX += 2;
 	}
-	iconY = tvPtr->inset + (tvPtr->titleHeight - iconHeight) / 2;
+	iconY = tvPtr->insetY + (tvPtr->titleHeight - iconHeight) / 2;
         columnPtr->iX = iconX;
         columnPtr->iY = iconY;
         columnPtr->iW = iconWidth;
@@ -5984,27 +6005,27 @@ DrawTitle(
             fgColor, SELECT_FG(tvPtr), shadow.color, 0.0,
             TK_ANCHOR_NW, TK_JUSTIFY_LEFT, 0, shadow.offset);
         columnPtr->tX = x;
-        columnPtr->tY = tvPtr->inset + 1;
+        columnPtr->tY = tvPtr->insetY + 1;
         columnPtr->tW = columnPtr->titleTextPtr->width;
         columnPtr->tH = columnPtr->titleTextPtr->height;
         ts.underline = columnPtr->underline;
 	Blt_DrawTextLayout(tvPtr->tkwin, drawable, columnPtr->titleTextPtr, &ts,
-		x, tvPtr->inset + 2 + tvPtr->titlePad);
+		x, tvPtr->insetY + 2 + tvPtr->titlePad);
     } else {
         columnPtr->tW = 0;
     }
     if ((columnPtr == tvPtr->sortColumnPtr) && (tvPtr->flatView)) {
 	Blt_DrawArrow(tvPtr->display, drawable, gc, 
 		xOffset + ARROW_OFFSET, 
-		tvPtr->inset + tvPtr->titleHeight / 2, STD_ARROW_HEIGHT, 
+		tvPtr->insetY + tvPtr->titleHeight / 2, STD_ARROW_HEIGHT, 
 		(tvPtr->sortDecreasing) ? ARROW_UP : ARROW_DOWN);
     } else if (columnPtr->drawArrow >= 0) {
         Blt_DrawArrow(tvPtr->display, drawable, gc, 
             xOffset + ARROW_OFFSET, 
-            tvPtr->inset + tvPtr->titleHeight / 2, STD_ARROW_HEIGHT, 
+            tvPtr->insetY + tvPtr->titleHeight / 2, STD_ARROW_HEIGHT, 
             columnPtr->drawArrow);
     }
-    Blt_Draw3DRectangle(tvPtr->tkwin, drawable, border, cx, tvPtr->inset, 
+    Blt_Draw3DRectangle(tvPtr->tkwin, drawable, border, cx, tvPtr->insetY, 
 	columnWidth, tvPtr->titleHeight, columnPtr->titleBorderWidth, 
 	columnPtr->titleRelief);
 }
@@ -6334,7 +6355,7 @@ DisplayTreeView(ClientData clientData)	/* Information about widget. */
 	 * grow/shrink it as attributes change.
 	 */
 
-	tvPtr->reqWidth = tvPtr->worldWidth + 2 * tvPtr->inset;
+	tvPtr->reqWidth = tvPtr->worldWidth + 2 * tvPtr->insetX;
 	Tk_GeometryRequest(tvPtr->tkwin, tvPtr->reqWidth, tvPtr->reqHeight);
     }
     if (!Tk_IsMapped(tvPtr->tkwin)) {
@@ -6385,6 +6406,7 @@ DisplayTreeView(ClientData clientData)	/* Information about widget. */
         selBorder = SELECT_BORDER(tvPtr);
 	for (linkPtr = Blt_ChainFirstLink(tvPtr->colChainPtr); 
 	     linkPtr != NULL; linkPtr = Blt_ChainNextLink(linkPtr)) {
+            
 	    columnPtr = Blt_ChainGetValue(linkPtr);
 	    columnPtr->flags &= ~COLUMN_DIRTY;
 	    if (columnPtr->hidden) {
@@ -6535,9 +6557,10 @@ DisplayTreeView(ClientData clientData)	/* Information about widget. */
 		}
 	    }
 	    if (columnPtr->relief != TK_RELIEF_FLAT) {
-		Blt_Draw3DRectangle(tvPtr->tkwin, drawable, border, x, 0, 
-			columnPtr->width, Tk_Height(tvPtr->tkwin), 
-		   columnPtr->borderWidth, columnPtr->relief);
+                 Blt_Draw3DRectangle(tvPtr->tkwin, drawable, border, x,
+                     tvPtr->padY, columnPtr->width,
+                     Tk_Height(tvPtr->tkwin)-(tvPtr->padY*2), 
+		     columnPtr->borderWidth, columnPtr->relief);
 	    }
 
 	}
