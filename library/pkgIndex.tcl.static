@@ -1,0 +1,2 @@
+package ifneeded BLT 2.4 "load {} BLT; set blt_library {$dir}"
+
