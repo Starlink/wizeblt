@@ -95,72 +95,76 @@ BLT_ENV_CC=$CC
 #  4. default to cc
 #
 
-AC_MSG_CHECKING([which C compiler])
-if test "x${blt_with_cc}" != "x" ; then 
-  CC=${blt_with_cc}
-  unset ac_cv_prog_CPP
-  unset ac_cv_prog_CC
-elif test "x${BLT_ENV_CC}" != "x" ; then
-  unset ac_cv_prog_CPP
-  unset ac_cv_prog_CC
-elif test "x${blt_cv_prog_cc}" != "x" ; then
-  CC=${blt_cv_prog_cc}
-  unset ac_cv_prog_CC
-else 
-  AC_PROG_CC
-fi
-if test "x${CC}" = "x" ; then
-  CC=cc
-fi
+dnl AC_MSG_CHECKING([which C compiler])
+dnl if test "x${blt_with_cc}" != "x" ; then 
+dnl  CC=${blt_with_cc}
+dnl  unset ac_cv_prog_CPP
+dnl  unset ac_cv_prog_CC
+dnl elif test "x${BLT_ENV_CC}" != "x" ; then
+dnl  unset ac_cv_prog_CPP
+dnl  unset ac_cv_prog_CC
+dnl elif test "x${blt_cv_prog_cc}" != "x" ; then
+dnl  CC=${blt_cv_prog_cc}
+dnl  unset ac_cv_prog_CC
+dnl else 
+dnl  AC_PROG_CC
+dnl fi
+dnl if test "x${CC}" = "x" ; then
+dnl  CC=cc
+dnl fi
 
-case $target in
-  *-*-cygwin*|*-*-mingw*)
-    if test "${blt_enable_cygwin}" = "no" ; then
-      CC="${CC} -mno-cygwin"
-    fi
-    ;;
-esac
+dnl case $target in
+dnl  *-*-cygwin*|*-*-mingw*)
+dnl    if test "${blt_enable_cygwin}" = "no" ; then
+dnl      CC="${CC} -mno-cygwin"
+dnl    fi
+dnl    ;;
+dnl esac
 
-AC_MSG_RESULT([$CC])
+dnl AC_MSG_RESULT([$CC])
 
-unset blt_cv_prog_cc
-AC_CACHE_VAL(blt_cv_prog_cc, blt_cv_prog_cc=$CC)
-AC_SUBST(CC)
+dnl unset blt_cv_prog_cc
+dnl AC_CACHE_VAL(blt_cv_prog_cc, blt_cv_prog_cc=$CC)
+dnl AC_SUBST(CC)
+AC_PROG_CC
+AC_PROG_CPP
+
 AC_PROG_CPP
 if test "x${GCC}" != "x" ; then
   blt_have_gcc="yes"
 else
   AC_MSG_CHECKING([if C compiler is really gcc])
-    AC_EGREP_CPP(_cc_is_gcc_, [
+  AC_EGREP_CPP(_cc_is_gcc_, [
 #ifdef __GNUC__
-    _cc_is_gcc_
+   _cc_is_gcc_
 #endif
 ],      [blt_have_gcc=yes], [blt_have_gcc=no])
   AC_MSG_RESULT([$blt_have_gcc])
 fi
 
-#
-# CFLAGS search order
-#
-#  1. command line (--with-cflags)
-#  2. cached variable ($blt_cv_prog_cflags)
-#  3. set to "-O6" if using gcc ($blt_have_gcc)
-#  4. otherwise, default to "-O"
-#
-AC_MSG_CHECKING([default compiler flags])
-if test  "x${blt_with_cflags}" != "x" ; then 
-  CFLAGS=${blt_with_cflags}
-elif test "x${blt_cv_prog_cflags}" != "x" ; then
-  CFLAGS=${blt_cv_prog_cflags}
-elif test "${blt_have_gcc}" = "yes" ; then
-  CFLAGS=-O6
-else
-  CFLAGS=-O
-fi
-AC_MSG_RESULT([$CFLAGS])
-unset blt_cv_prog_cflags
-AC_CACHE_VAL(blt_cv_prog_cflags, blt_cv_prog_cflags=$CFLAGS)
-AC_SUBST(CFLAGS)
+
+dnl #
+dnl # CFLAGS search order
+dnl #
+dnl #  1. command line (--with-cflags)
+dnl #  2. cached variable ($blt_cv_prog_cflags)
+dnl #  3. set to "-O6" if using gcc ($blt_have_gcc)
+dnl #  4. otherwise, default to "-O"
+dnl #
+dnl AC_MSG_CHECKING([default compiler flags])
+dnl if test  "x${blt_with_cflags}" != "x" ; then 
+dnl  CFLAGS=${blt_with_cflags}
+dnl elif test "x${blt_cv_prog_cflags}" != "x" ; then
+dnl  CFLAGS=${blt_cv_prog_cflags}
+dnl elif test "${blt_have_gcc}" = "yes" ; then
+dnl  CFLAGS=-O6
+dnl else
+dnl  CFLAGS=-O
+dnl fi
+dnl AC_MSG_RESULT([$CFLAGS])
+dnl unset blt_cv_prog_cflags
+dnl AC_CACHE_VAL(blt_cv_prog_cflags, blt_cv_prog_cflags=$CFLAGS)
+dnl AC_SUBST(CFLAGS)
 
 GCCFLAGS=""
 if test "${blt_have_gcc}" = "yes" ; then
@@ -171,17 +175,13 @@ if test "${blt_have_gcc}" = "yes" ; then
 fi
 AC_SUBST(GCCFLAGS)
 
-AC_CYGWIN
+dnl AC_CYGWIN
 
 blt_lib_prefix="lib"
 case $target in
-  *-*-cygwin*|*-*-mingw*)
+  *-*-mingw*)
     blt_platform="win"
-    if test "$ac_cv_cygwin" = "yes" ; then
-      blt_lib_prefix="cyg"
-    else 
-      blt_lib_prefix=""
-    fi
+    blt_lib_prefix=""
     ;;
   *-*-macosx)
     blt_platform="macosx"
@@ -253,8 +253,8 @@ AC_CHECK_HEADERS(stdlib.h unistd.h)
 # Types:	Check for existence of types of size_t and pid_t
 #
 # -----------------------------------------------------------------------
-AC_TYPE_SIZE_T
-AC_TYPE_PID_T
+dnl AC_TYPE_SIZE_T
+dnl AC_TYPE_PID_T
 
 AC_MSG_CHECKING([whether union wait is defined correctly])
 AC_CACHE_VAL(blt_cv_struct_wait_works,
@@ -306,7 +306,7 @@ AC_SUBST(SIZEOF_VOID_P)
 #
 # -----------------------------------------------------------------------
 
-AC_HAVE_FUNCS(strdup strcasecmp strncasecmp drand48 srand48 finite isnan)
+AC_HAVE_FUNCS(strdup strcasecmp strncasecmp drand48 srand48 finite strtod isnan nan)
 
 # For HPUX it's a little more complicated to search for isfinite
 AC_MSG_CHECKING([for isfinite])
@@ -332,13 +332,13 @@ AC_MSG_RESULT([$blt_cv_have_isfinite])
 
 AC_MSG_CHECKING([whether DBL_EPSILON is defined in float.h])
 AC_CACHE_VAL(blt_cv_found_dbl_epsilon,
-    AC_EGREP_CPP(yes,	
+    AC_EGREP_CPP(blt_yes,	
    [
 #ifdef HAVE_FLOAT_H
 #include <float.h>
 #endif
 #ifdef DBL_EPSILON
- yes
+ blt_yes
 #endif
 ], blt_cv_found_dbl_epsilon=yes, blt_cv_found_dbl_epsilon=no) 
 )
@@ -493,6 +493,7 @@ else
   for dir in \
    $prefix \
    $exec_prefix \
+   ../tcl \
    $blt_cv_tcl_lib 
   do
     if test -r "$dir/tclConfig.sh" ; then
@@ -589,8 +590,9 @@ else
   for dir in \
    $prefix \
    $exec_prefix \
+   ../tk \
    $blt_cv_tk_lib \
-   $blt_cv_tcl_lib 
+   $blt_cv_tcl_lib
   do
     if test -r "$dir/tkConfig.sh" ; then
       tk_config_sh="$dir/tkConfig.sh"
@@ -610,9 +612,9 @@ else
     for dir in \
      ../tcl \
      `ls -dr ../tk[[4-9]].[[0-9]]* 2>/dev/null` \
-     ../../tcl \
+     ../../tk \
      `ls -dr ../../tk[[4-9]].[[0-9]]* 2>/dev/null` \
-     ../../../tcl \
+     ../../../tk \
      `ls -dr ../../../tk[[4-9]].[[0-9]]* 2>/dev/null`
     do
       if test -r "$dir/$blt_platform/tkConfig.sh"; then
@@ -711,7 +713,7 @@ else
 fi
 
 case $target in
-  *-sunos4*|*-*-netbsd|NetBSD-*|FreeBSD-*|OpenBSD-*|*-*-cygwin*|*-*-mingw*)
+  *-sunos4*|*-*-netbsd|NetBSD-*|FreeBSD-*|OpenBSD-*|*-*-mingw*)
     TCL_LIB_NAME="tcl${TCL_MAJOR_VERSION}${TCL_MINOR_VERSION}"
     TK_LIB_NAME="tk${TK_MAJOR_VERSION}${TK_MINOR_VERSION}"
     ;;
@@ -951,7 +953,7 @@ if test "$prefix" = "NONE" ; then
 fi
 
 if test "$exec_prefix" = "NONE" ; then
-  exec_prefix=$prefix
+  exec_prefix=${TCL_EXEC_PREFIX}
 fi
 
 # -------------------------------------------------------------------------
@@ -1059,6 +1061,7 @@ SHLIB_CFLAGS=""
 SHLIB_LIB_SPECS="${JPEG_LIB_SPEC}"
 SHLIB_TCL_ONLY_LIB_SPECS="${TCL_ONLY_LIB_SPECS}"
 SHLIB_TCL_ONLY_LIB_SPECS=""
+save_LDFLAGS="${LDFLAGS}"
 LDFLAGS=""
 LD_RUN_PATH=""
 EXTRA_LIB_SPECS=""
@@ -1138,7 +1141,7 @@ case $target in
     SHLIB_LD_FLAGS='-shared -Wl,-E -Wl,-soname,$@'
     ;;
 
-  *-*-cygwin* | *-*-mingw*)
+  *-*-mingw*)
     SHLIB_LD="${CC}"
     SHLIB_LD_FLAGS='-shared -Wl,-E -Wl,--out-implib,$@'
     EXTRA_LIB_SPECS="-lwinspool"
@@ -1198,7 +1201,7 @@ case $target in
   *-linux*)
     SHLIB_CFLAGS="-fPIC"
     SHLIB_LD="${CC}"
-    SHLIB_LD_FLAGS='-rdynamic -shared -Wl,-E -Wl,-soname,$@'
+    SHLIB_LD_FLAGS='$(CFLAGS) -rdynamic -shared -Wl,-E -Wl,-soname,$@'
     LD_RUN_PATH="-Wl,-rpath,${loader_run_path}"
     
     LDFLAGS=""
@@ -1268,13 +1271,13 @@ case $target in
     SHLIB_LD="ld -shared"
     ;;
 
-  *-osf1V*)
+  *dec-osf*)
     # Digital OSF/1
 
     SHLIB_CFLAGS=""
     SHLIB_LD='ld'
     SHLIB_LD_FLAGS='-shared -expect_unresolved "*"'
-    LD_RUN_PATH="-Wl,-rpath,${loader_run_path}"
+    LD_RUN_PATH="-rpath ${loader_run_path}"
     LDFLAGS=""
     ;;
 
@@ -1312,7 +1315,7 @@ case $target in
     SHLIB_CFLAGS="-KPIC"
     if test "${blt_with_gnu_ld}" = "yes" -a "$blt_have_gcc" = "yes" ; then
       SHLIB_LD="gcc"
-      SHLIB_LD_FLAGS='-rdynamic -shared -Wl,-E -Wl,-soname,$@'
+      SHLIB_LD_FLAGS='$(CFLAGS) -rdynamic -shared -Wl,-E -Wl,-soname,$@'
       LD_RUN_PATH="-Wl,-rpath,${loader_run_path}"
     else
       SHLIB_LD="/usr/ccs/bin/ld"
@@ -1336,6 +1339,15 @@ case $target in
     SHLIB_LD="${CC}"
     SHLIB_LD_FLAGS=" -Wl,-Bexport"
     ;;
+
+ *-darwin*)
+    SHLIB_SUFFIX=".dylib"
+    SHLIB_CFLAGS='-fno-common'
+    TCL_SHLIB_LD='${CC}'
+    SHLIB_LD_FLAGS="-dynamiclib ${LDFLAGS} -Wl,-single_module"
+    SHLIB_LIB_SPECS='${LIBS}'
+    SHLIB_TCL_ONLY_LIB_SPECS='${TCL_ONLY_LIB_SPECS}'
+    ;;
   
   *)
     build_shared="no"
@@ -1343,13 +1355,22 @@ case $target in
 
 esac
 
+# LDFLAGS should include environment version if set.
+if test "$save_LDFLAGS" != ""; then
+   LDFLAGS="${LDFLAGS} ${save_LDFLAGS}"
+fi
+
 # If we're running gcc, then set SHLIB_CFLAGS flags for compiling
 # shared libraries for gcc, instead of those of the vendor's
-# compiler.
-
-
+# compiler (except on Mac OS X, where we need the -fno-common flag: allan)
 if test "$blt_have_gcc" = "yes" ; then
-  SHLIB_CFLAGS="-fPIC"
+  case $target in
+  *-darwin*)
+    ;;
+  *)
+    SHLIB_CFLAGS="-fPIC"
+    ;;
+  esac
 fi
 
 # We can't back link against static versions of Tcl/Tk. 
@@ -1438,9 +1459,9 @@ echo ""
 #	   ./demos/Makefile
 #
 #--------------------------------------------------------------------
-src_Makefile="generic/Makefile"
+generic_Makefile="generic/Makefile"
 if test "${blt_platform}" = "win"; then
-    src_Makefile="generic/Makefile:generic/Makefile-cyg.in"
+    generic_Makefile="generic/Makefile:generic/Makefile-cyg.in"
 fi
-AC_OUTPUT(Makefile ${src_Makefile} generic/bltHash.h generic/shared/Makefile man/Makefile library/Makefile demos/Makefile)
+AC_OUTPUT(Makefile ${generic_Makefile} generic/bltHash.h generic/shared/Makefile man/Makefile library/Makefile demos/Makefile)
 
