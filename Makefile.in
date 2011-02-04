@@ -47,17 +47,17 @@ install-all:
 	(cd library; $(MAKE) install)
 	(cd man; $(MAKE) install)
 	(cd demos; $(MAKE) install)
-	$(INSTALL_DATA) $(srcdir)/README $(INSTALL_DIR)$(scriptdir)
-	$(INSTALL_DATA) $(srcdir)/PROBLEMS $(INSTALL_DIR)$(scriptdir)
-	$(INSTALL_DATA) $(srcdir)/NEWS $(INSTALL_DIR)$(scriptdir)
+	$(INSTALL_DATA) $(srcdir)/README $(INSTALL_ROOT)$(scriptdir)
+	$(INSTALL_DATA) $(srcdir)/PROBLEMS $(INSTALL_ROOT)$(scriptdir)
+	$(INSTALL_DATA) $(srcdir)/NEWS $(INSTALL_ROOT)$(scriptdir)
 
 mkdirs:
 	@for i in $(instdirs) ; do \
           if test -d $(INSTALL_ROOT)$$i ; then \
 	    : ; \
 	  else \
-            echo " mkdir $(INSTALL_ROOT)$$i" ; \
-            mkdir $(INSTALL_ROOT)$$i ; \
+            echo " mkdir -p $(INSTALL_ROOT)$$i" ; \
+            mkdir -p $(INSTALL_ROOT)$$i ; \
           fi ; \
         done
 
