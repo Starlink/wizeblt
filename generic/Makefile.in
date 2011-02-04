@@ -155,7 +155,8 @@ headers =	$(srcdir)/blt.h \
 		$(srcdir)/bltPool.h \
 		$(srcdir)/bltTree.h \
 		$(srcdir)/bltDecls.h \
-		$(srcdir)/bltVector.h 
+		$(srcdir)/bltVector.h \
+		$(srcdir)/bltOldConfig.h
 
 lib_a =		libBLT.a
 libvers_a =	libBLT$(version).a
