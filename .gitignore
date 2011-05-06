@@ -1,5 +1,6 @@
 *.o
 *~
+*.dSYM
 config.
 config.*
 configure.lineno
