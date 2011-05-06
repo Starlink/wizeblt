@@ -36,8 +36,8 @@ WITH_JPEG=2
 # ------------------------------------------------------------------------
 
 BLT_MAJOR_VERSION = 	2
-BLT_MINOR_VERSION = 	4
-BLT_VERSION =		2.4
+BLT_MINOR_VERSION = 	5
+BLT_VERSION =		2.5
 
 prefix =		C:/Program\ Files/Tcl
 exec_prefix =		$(prefix)

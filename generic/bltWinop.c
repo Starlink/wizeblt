@@ -692,11 +692,11 @@ AlphaOp(clientData, interp, argc, argv)
     Tk_PhotoHandle srcPhoto, destPhoto;
     Tk_PhotoImageBlock src, dest;
     Blt_ColorImage srcImage, destImage;
-    int result, alpha, setTrans = 0;
+    int result, alpha, anycolor = 0, withAlpha, hasWith = 0;
     Tk_Window tkwin = (Tk_Window)clientData;
     Pix32 oldColor;
     char *string;
-    int flags, shift = 0;
+    int negate = 0, shift = 0;
 
     alpha = 0;
     if (!strcmp("-shift", argv[2])) {
@@ -731,11 +731,11 @@ AlphaOp(clientData, interp, argc, argv)
     }
     string = argv[4];
     if (string[0] == '!') {
-        flags = 1;
+        negate = 1;
         string++;
     }
     if (!strcmp(string, "*")) {
-        setTrans = 1;
+        anycolor = 1;
         if (argc <= 5) {
             Tcl_AppendResult(interp, "must give an alpha", 0);
             return TCL_ERROR;
@@ -756,13 +756,23 @@ AlphaOp(clientData, interp, argc, argv)
                 return TCL_ERROR;
         }
     }
+    if (argc > 6) {
+        if (Tcl_GetInt(interp, argv[6], &withAlpha) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        hasWith = 1;
+        if (withAlpha<0 || withAlpha > 255) {
+            Tcl_AppendResult(interp, "withalpha must be >= 0 and <= 255", argv[3],
+                (char *)NULL);
+                return TCL_ERROR;
+        }
+    }
     if ((dest.width != src.width) || (dest.height != src.height)) {
         Tk_PhotoSetSize(destPhoto, src.width, src.height);
     }
     srcImage = Blt_PhotoToColorImage(srcPhoto);
     destImage = Blt_PhotoToColorImage(destPhoto);
     result = TCL_OK;
-    /*result = Blt_TransColorImage(srcImage, destImage, setTrans?NULL:&oldColor, alpha, flags); */
     {
     int width, height;
     int count, same;
@@ -786,14 +796,16 @@ AlphaOp(clientData, interp, argc, argv)
             destPtr->value = color->value;
             destPtr->Alpha = srcPtr->Blue;
         }
-    } else if (!setTrans) {
+    } else if (!anycolor) {
         color = &oldColor;
         for (endPtr = destPtr + count; destPtr < endPtr; srcPtr++, destPtr++) {
             origAlpha = srcPtr->Alpha;
             destPtr->value = srcPtr->value;
             same = (srcPtr->Red == color->Red && srcPtr->Green == color->Green &&
             srcPtr->Blue == color->Blue);
-            if ((flags&1)) {
+            if (hasWith && origAlpha != withAlpha) {
+                
+            } else if (negate) {
                 if ((!same) && (origAlpha != (unsigned char)-1)) {
                     origAlpha = alpha;
                 }
@@ -808,7 +820,9 @@ AlphaOp(clientData, interp, argc, argv)
         for (endPtr = destPtr + count; destPtr < endPtr; srcPtr++, destPtr++) {
             origAlpha = srcPtr->Alpha;
             destPtr->value = srcPtr->value;
-            if (origAlpha == (unsigned char)-1) {
+            if (hasWith && origAlpha == withAlpha) {
+                destPtr->Alpha = alpha;
+            } else if (origAlpha == (unsigned char)-1) {
                 destPtr->Alpha = alpha;
             }
         }
@@ -838,7 +852,7 @@ RecolorOp(clientData, interp, argc, argv)
     Tk_Window tkwin = (Tk_Window)clientData;
     Pix32 oldColor, newColor;
 
-    alpha = 255;
+    alpha = -1;
     srcPhoto = Blt_FindPhoto(interp, argv[2]);
     if (srcPhoto == NULL) {
 	Tcl_AppendResult(interp, "source image \"", argv[2], "\" doesn't",
@@ -900,6 +914,7 @@ ColorsOp(clientData, interp, argc, argv)
     Tk_PhotoImageBlock src;
     Blt_ColorImage srcImage;
     int top, x, y, isalph, iscnt, isNew, cnt;
+    int i, rng[4], from = 0;
     register Pix32 *srcPtr;
     Tcl_Obj *listPtr;
     char buf[100];
@@ -913,10 +928,23 @@ ColorsOp(clientData, interp, argc, argv)
     while (argc > 3) {
         if (!strcmp(argv[2], "-alpha")) {
             isalph = 1;
+        } else if (!strcmp(argv[2], "-from")) {
+            from = 1;
+            if (argc<7) {
+                Tcl_AppendResult(interp, "expected 4 args: x1 y1 x2 y2", (char *)NULL);
+                return TCL_ERROR;
+            }
+            for (i=0; i<4; i++) {
+                if (Tcl_GetInt(interp, argv[i+3], rng+i)) {
+                    return TCL_ERROR;
+                }
+            }
+            argc -= 4;
+            argv += 4;
         } else if (!strcmp(argv[2], "-count")) {
             iscnt = 1;
         } else {
-            Tcl_AppendResult(interp, "expected -alpha or -count", (char *)NULL);
+            Tcl_AppendResult(interp, "expected -from, -alpha or -count", (char *)NULL);
             return TCL_ERROR;
         }
         argc--;
@@ -941,7 +969,9 @@ ColorsOp(clientData, interp, argc, argv)
 
     Blt_InitHashTable(&hTbl, BLT_STRING_KEYS);
     for (y = 0; y < src.height; y++) {
+        if (from && (y < rng[1] || y > rng[3])) continue;
         for (x = 0; x < src.width; x++) {
+            if (from && (x < rng[0] || x > rng[2])) continue;
             if (!isalph) {
                 sprintf(buf, "#%02x%02x%02x", srcPtr->Red, srcPtr->Green, srcPtr->Blue);
             } else {
@@ -973,6 +1003,66 @@ ColorsOp(clientData, interp, argc, argv)
     }
     Tcl_SetObjResult(interp, listPtr);
     Blt_DeleteHashTable(&hTbl);
+    return TCL_OK;
+}
+
+/*ARGSUSED*/
+static int
+TransOp(clientData, interp, argc, argv)
+    ClientData clientData;	/* Not used. */
+    Tcl_Interp *interp;
+    int argc;			/* Not used. */
+    char **argv;
+{
+    Tk_PhotoHandle srcPhoto;
+    Tk_PhotoImageBlock src;
+    Blt_ColorImage srcImage;
+    int x, y, alpha,isSet = 0;
+    register Pix32 *srcPtr;
+    char buf[100];
+
+    if (argc == 6) {
+        isSet = 1;
+        if (Tcl_GetInt(interp, argv[5], &alpha) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (alpha<0 || alpha > 255) {
+            Tcl_AppendResult(interp, "alpha must be >= 0 and <= 255", argv[3],
+                (char *)NULL);
+                return TCL_ERROR;
+        }
+    }
+    if (Tcl_GetInt(interp, argv[3], &x) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    if (Tcl_GetInt(interp, argv[4], &y) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    srcPhoto = Blt_FindPhoto(interp, argv[2]);
+    if (srcPhoto == NULL) {
+	Tcl_AppendResult(interp, "source image \"", argv[2], "\" doesn't",
+	    " exist or is not a photo image", (char *)NULL);
+	return TCL_ERROR;
+    }
+    Tk_PhotoGetImage(srcPhoto, &src);
+    if ((src.width < 1) || (src.height < 1)) {
+        Tcl_AppendResult(interp, "empty image", (char *)NULL);
+        return TCL_ERROR;
+    }
+    srcImage = Blt_PhotoToColorImage(srcPhoto);
+    srcPtr = Blt_ColorImageBits(srcImage);
+    if (y < 0 || y >= src.height || x < 0 || x >= src.width) {
+        Tcl_AppendResult(interp, "out of range", (char *)NULL);
+        return TCL_ERROR;
+    } 
+    srcPtr = srcPtr + y*src.width + x;
+    if (isSet) {
+        srcPtr->Alpha = alpha;
+        Blt_ColorImageToPhoto(srcImage, srcPhoto);
+    } else {
+        sprintf(buf, "%d", srcPtr->Alpha);
+        Tcl_AppendResult(interp, buf, 0);
+    }
     return TCL_OK;
 }
 
@@ -1981,6 +2071,47 @@ ResampleOp(clientData, interp, argc, argv)
 
 /*ARGSUSED*/
 static int
+BlurOp(clientData, interp, argc, argv)
+    ClientData clientData;	/* Not used. */
+    Tcl_Interp *interp;
+    int argc;			/* Not used. */
+    char **argv;
+{
+    Tk_PhotoHandle srcPhoto, destPhoto;
+    Tk_PhotoImageBlock src, dest;
+    double radius;
+
+    radius = 3;
+    srcPhoto = Blt_FindPhoto(interp, argv[2]);
+    if (srcPhoto == NULL) {
+	Tcl_AppendResult(interp, "source image \"", argv[2], "\" doesn't",
+	    " exist or is not a photo image", (char *)NULL);
+	return TCL_ERROR;
+    }
+    destPhoto = Blt_FindPhoto(interp, argv[3]);
+    if (destPhoto == NULL) {
+	Tcl_AppendResult(interp, "destination image \"", argv[3], "\" doesn't",
+	    " exist or is not a photo image", (char *)NULL);
+	return TCL_ERROR;
+    }
+    if (argc > 4) {
+        if (Tcl_GetDouble(interp, argv[4], &radius) != TCL_OK) {
+            return TCL_ERROR;
+        }
+    }
+    Tk_PhotoGetImage(srcPhoto, &src);
+    if ((src.width <= 1) || (src.height <= 1)) {
+	Tcl_AppendResult(interp, "source image \"", argv[2], "\" is empty",
+	    (char *)NULL);
+	return TCL_ERROR;
+    }
+    Tk_PhotoGetImage(destPhoto, &dest);
+    Tk_PhotoSetSize(destPhoto, src.width, src.height);
+    return Blt_BlurColorImage(srcPhoto, destPhoto, (int)(radius + 0.5) );
+}
+
+/*ARGSUSED*/
+static int
 RotateOp(clientData, interp, argc, argv)
     ClientData clientData;	/* Not used. */
     Tcl_Interp *interp;
@@ -2404,8 +2535,9 @@ SubsampleOp(clientData, interp, argc, argv)
 
 static Blt_OpSpec imageOps[] =
 {
-    {"alpha", 2, (Blt_Op)AlphaOp, 6, 9, "?-shift? srcPhoto destPhoto Color ?alpha?",},
-    {"colors", 3, (Blt_Op)ColorsOp, 4, 0, "?-alpha? ?-count? srcPhoto",},
+    {"alpha", 2, (Blt_Op)AlphaOp, 6, 10, "?-shift? srcPhoto destPhoto Color ?alpha? ?withalpha?",},
+    {"blur", 2, (Blt_Op)BlurOp, 5, 6, "srcPhoto destPhoto ?radius?",},
+    {"colors", 3, (Blt_Op)ColorsOp, 4, 0, "?-alpha? ?-count? ?-from x1 y1 x2 y2? srcPhoto",},
     {"convolve", 3, (Blt_Op)ConvolveOp, 6, 6, "srcPhoto destPhoto filter",},
     {"gradient", 1, (Blt_Op)GradientOp, 6, 0, "photo left right ?-type lines|normal|radial|rectangular|linear|sine|halfsine? ?-skew val? ?-slant val? ?-rand val? ?-mathval val? ?-mathfunc circle|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|exp|sqrt|log|log10|rand?",},
     {"merge", 2, (Blt_Op)MergeOp, 6, 7, "srcPhoto1 srcPhoto2 destPhoto ?opacity? ?opacity2?",},
@@ -2418,6 +2550,7 @@ static Blt_OpSpec imageOps[] =
     {"rotate", 2, (Blt_Op)RotateOp, 6, 6, "srcPhoto destPhoto angle",},
     {"subsample", 2, (Blt_Op)SubsampleOp, 9, 11,
 	"srcPhoto destPhoto x y width height ?horzFilter? ?vertFilter?",},
+    {"trans", 2, (Blt_Op)TransOp, 6, 7, "image x y ?alpha?",},
 };
 
 static int nImageOps = sizeof(imageOps) / sizeof(Blt_OpSpec);

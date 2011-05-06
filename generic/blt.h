@@ -29,8 +29,8 @@
 #define BLT_MAJOR_VERSION 	2
 #define BLT_MINOR_VERSION 	5
 #define BLT_VERSION		"2.5"
-#define BLT_PATCH_LEVEL		"2.5.2"
-#define BLT_RELEASE_SERIAL	28
+#define BLT_PATCH_LEVEL		"2.5.3"
+#define BLT_RELEASE_SERIAL	29
 
 #include <tcl.h>
 

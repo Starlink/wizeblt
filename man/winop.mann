@@ -120,17 +120,22 @@ Realize window.
 Image sub-commands.
 .RS
 .TP
-\fBwinop image alpha \fR \fIsrcImage\fR \fIdestImage\fR \fIcolor\fR ?\fIalpha\fR?
+\fBwinop image alpha \fR ?\fb-shift\fR?  \fIsrcImage\fR \fIdestImage\fR \fIcolor\fR ?\fIalpha\fR?  ?\fIwithalpha\fR?
 Set image pixels of the given color to transparent.
 If an alpha value is not given, it defaults to \fB0\fR
 (meaning transparent).  An alpha of 255 is used for solid.
 The \fIsrcImage\fR and \fIdestImage\fR may be the same.
+If the \fIcolor\fR is \fB*\fR any color is matched.
+If \fIcolor\fR is prefixed with \fB!\fR match is inverted.
 .TP
 \fBwinop gradients\fR \fIleftcolor\fR \fIrightcolor\fR \fIwidth\fR
 Return a list of \fIwidth\fR colors that graduate from
 \fIleftcolor\fR to the color just before \fIrightcolor\fR.
 Note that the last color in the returned list is not \fIrightcolor\fR.
 A typical use for this is calculating shadow colors.
+.TP
+\fBwinop image blur\fR \fIsrcImage dstImage\fR ?\fIradius\fR?
+Blur an image using gaussian blur.
 .TP
 \fBwinop image colors\fR  ?\fB-alpha\fR? ?\fB-count\fR? \fIsrcImage\fR
 Return list of distinct colors.  If -alpha is given, the alpha is appended
@@ -224,6 +229,9 @@ may be the same.
 .TP
 \fBwinop image subsample\fR \fIsrcImage\fR \fIdestImage\fR \fIx\fR \fIy\fR \fIwidth\fR \fIheight\fR ?\fIhorizFilter\fR? ?\fIvertFilter\fR?
 Resample area of an image.  See resample.
+.TP
+\fBwinop image trans\fR \fIimage x y\fR ?\fIalpha\fR?
+Get or set the integer alpha value within an image.
 .RE
 .TP
 \fBwinop lower\fR ?\fIwindow\fR?...
