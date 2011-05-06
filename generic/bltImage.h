@@ -251,6 +251,10 @@ extern void Blt_ResamplePhoto _ANSI_ARGS_((Tk_PhotoHandle srcPhoto,
 	int x, int y, int width, int height, Tk_PhotoHandle destPhoto,
 	ResampleFilter *horzFilterPtr, ResampleFilter *vertFilterPtr));
 
+	
+extern int Blt_BlurColorImage _ANSI_ARGS_((
+        Tk_PhotoHandle srcPhoto, Tk_PhotoHandle dstPhoto, int radius));
+        
 extern Blt_ColorImage Blt_ResizeColorImage _ANSI_ARGS_((Blt_ColorImage src,
 	int x, int y, int width, int height, int destWidth, int destHeight));
 

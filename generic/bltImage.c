@@ -940,6 +940,92 @@ ZoomImageHorizontally(src, dest, filterPtr)
 /*
  *----------------------------------------------------------------------
  *
+ * Blt_BlurColorImage --
+ *
+ *	Blur an image.
+ *
+ * Results:
+ *      Returns the resampled color image. The original color image
+ *	is left intact.
+ *
+ *----------------------------------------------------------------------
+ */
+int
+Blt_BlurColorImage(srcPhoto, dstPhoto, radius)
+    Tk_PhotoHandle srcPhoto;
+    Tk_PhotoHandle dstPhoto;
+    int radius;
+{
+
+    int width, height;
+    register Pix32 *src, *dst;
+    unsigned* precalc;
+    double mul;
+    int channel;
+    int iteration;
+
+    Blt_ColorImage srcPtr, dstPtr;
+
+    srcPtr = Blt_PhotoToColorImage(srcPhoto);
+    dstPtr = Blt_PhotoToColorImage(dstPhoto);
+
+    width = Blt_ColorImageWidth(srcPtr);
+    height = Blt_ColorImageHeight(srcPtr);
+    precalc = (unsigned*)Blt_Malloc(width*height*sizeof(unsigned));
+
+    src = Blt_ColorImageBits(srcPtr);
+    dst = Blt_ColorImageBits(dstPtr);
+    
+    mul = 1.f/((radius*2)*(radius*2));
+
+    memcpy( dst, src, width*height*4 );
+
+    for ( iteration = 0; iteration < 3; iteration++ ) {
+        for( channel = 0; channel < 4; channel++ ) {
+            int x1,y1a;
+
+            int pind;
+            unsigned* pre;
+            pre = precalc;
+
+            pind = 0;
+            for (y1a=0;y1a<height;y1a++) {
+                for (x1=0;x1<width;x1++) {
+                    int tot;
+                    tot = src[pind].channel[channel];
+                    if (x1>0) tot+=pre[-1];
+                    if (y1a>0) tot+=pre[-width];
+                    if (x1>0 && y1a>0) tot-=pre[-width-1];
+                    *pre++=tot;
+                    pind ++;
+                }
+            }
+
+            pind = (int)radius * width + (int)radius;
+            for (y1a=radius;y1a<height-radius;y1a++) {
+                for (x1=radius;x1<width-radius;x1++) {
+                    int l, t, r, b, tot;
+                    l = x1 < radius ? 0 : x1 - radius;
+                    t = y1a < radius ? 0 : y1a - radius;
+                    r = x1 + radius >= width ? width - 1 : x1 + radius;
+                    b = y1a + radius >= height ? height - 1 : y1a + radius;
+                    tot = precalc[r+b*width] + precalc[l+t*width] - 
+                    precalc[l+b*width] - precalc[r+t*width];
+                    dst[pind].channel[channel] = (unsigned char)(tot*mul);
+                    pind++;
+                }
+                pind += (int)radius * 2;
+            }
+        }
+        memcpy( src, dst, width*height*4 );
+    }
+    Blt_Free(precalc);
+    Blt_ColorImageToPhoto(dstPtr, dstPhoto);
+    return TCL_OK;
+}
+/*
+ *----------------------------------------------------------------------
+ *
  * Blt_ResampleColorImage --
  *
  *      Resamples a given color image using 1-D filters and returns
@@ -2604,8 +2690,14 @@ Blt_RecolorImage(src, dest, oldColor, newColor, alpha)
 	destPtr->value = srcPtr->value;
 	if (srcPtr->Red == oldColor->Red && srcPtr->Green == oldColor->Green &&
 	    srcPtr->Blue == oldColor->Blue) {
+	    unsigned char oldAlpha;
+	    oldAlpha = srcPtr->Alpha;
 	    destPtr->value = newColor->value;
-            destPtr->Alpha = alpha;
+            if (alpha>=0) {
+                destPtr->Alpha = alpha;
+            } else {
+                destPtr->Alpha = oldAlpha;
+            }
 	}
     }
     return TCL_OK;
