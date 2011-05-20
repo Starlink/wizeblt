@@ -28,6 +28,14 @@
 #include "bltInt.h"
 #include "bltList.h"
 
+/* From tclIntDecl.h */
+
+/* 126 */
+void Tcl_GetVariableFullName (Tcl_Interp * interp,
+                              Tcl_Var variable, Tcl_Obj * objPtr);
+Tcl_Var Tcl_FindNamespaceVar (Tcl_Interp * interp, const char * name, Tcl_Namespace * contextNsPtr, int flags); /* 120 */
+
+
 /* Namespace related routines */
 
 /*
