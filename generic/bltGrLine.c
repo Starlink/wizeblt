@@ -3085,8 +3085,9 @@ ClosestTrace(graphPtr, linePtr, searchPtr, distProc)
     register Point2D *pointPtr, *endPtr;
     int i;
 
-    i = -1;			/* Suppress compiler warning. */
+    i = searchPtr->index;
     minDist = searchPtr->dist;
+    closest = searchPtr->point;
     for (linkPtr = Blt_ChainFirstLink(linePtr->traces); linkPtr != NULL;
 	linkPtr = Blt_ChainNextLink(linkPtr)) {
 	tracePtr = Blt_ChainGetValue(linkPtr);
@@ -3140,8 +3141,9 @@ ClosestStrip(graphPtr, linePtr, searchPtr, distProc)
     int i;
     register Segment2D *s;
 
-    i = 0;
+    i = searchPtr->index;
     minDist = searchPtr->dist;
+    closest = searchPtr->point;
     s = linePtr->strips;
     for (count = 0; count < linePtr->nStrips; count++, s++) {
 	dist = (*distProc)(searchPtr->x, searchPtr->y, &(s->p), &(s->q), &b);

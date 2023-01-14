@@ -4274,13 +4274,13 @@ ConfigureOp(graphPtr, interp, argc, argv)
     Graph *graphPtr;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     Marker *markerPtr;
     int flags = TK_CONFIG_ARGV_ONLY;
     char *oldName;
     int nNames, nOpts;
-    char **options;
+    CONST char **options;
     register int i;
     int under;
 
@@ -4313,7 +4313,7 @@ ConfigureOp(graphPtr, interp, argc, argv)
 	/* Save the old marker. */
 	oldName = markerPtr->name;
 	under = markerPtr->drawUnder;
-	if (Tk_ConfigureWidget(interp, graphPtr->tkwin, 
+	if (Blt_ConfigureWidget(interp, graphPtr->tkwin, 
 		markerPtr->classPtr->configSpecs, nOpts, options, 
 		(char *)markerPtr, flags) != TCL_OK) {
 	    return TCL_ERROR;

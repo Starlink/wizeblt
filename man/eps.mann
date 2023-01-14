@@ -55,7 +55,7 @@ It also scales and translates the EPS file when the canvas is printed.
 .DE
 The \fBeps\fR item creates a new canvas item. \fICanvas\fR is the name
 of a \fBcanvas\fR widget.  You must supply the X-Y coordinate of
-the new eps item.  How the coordinate is exactly interpretered is 
+the new eps item.  How the coordinate is exactly interpreted is
 controlled by the \fB\-anchor\fR option (see below).
 .PP
 Additional options may be specified on the command line to configure

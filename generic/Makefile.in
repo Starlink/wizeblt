@@ -152,6 +152,7 @@ headers =	$(srcdir)/blt.h \
 		$(srcdir)/bltChain.h \
 		bltHash.h \
 		$(srcdir)/bltList.h \
+		$(srcdir)/bltOldConfig.h \
 		$(srcdir)/bltPool.h \
 		$(srcdir)/bltTree.h \
 		$(srcdir)/bltDecls.h \
@@ -231,7 +232,7 @@ mkdirs:
             : ; \
           else \
             echo " mkdir $(INSTALL_ROOT)$$i" ; \
-            mkdir $(INSTALL_ROOT)$$i ; \
+            mkdir -p $(INSTALL_ROOT)$$i ; \
           fi ; \
         done
 
@@ -263,7 +264,8 @@ clean:
 
 distclean: clean
 	$(RM) $(srcdir)/*.bak $(srcdir)/*\~ $(srcdir)/"#"*  Makefile
-	$(RM) bltConfig.h Makefile TAGS
+	$(RM) bltConfig.h bltHash.h Makefile TAGS
+	(cd shared; $(MAKE) distclean)
 
 .c.o:
 	$(CC) -c $(CC_SWITCHES) $<

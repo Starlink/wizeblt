@@ -1,5 +1,7 @@
 /* Old config headers. */
 
+#include <tk.h>
+
 EXTERN int		Blt_ConfigureInfo _ANSI_ARGS_((Tcl_Interp * interp, 
 				Tk_Window tkwin, Tk_ConfigSpec * specs, 
 				char * widgRec, CONST char * argvName, 

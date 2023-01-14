@@ -578,7 +578,7 @@ DoConfig(interp, tkwin, specPtr, value, valueIsUid, widgRec)
 	    case TK_CONFIG_CUSTOM:
 		if ((*specPtr->customPtr->parseProc)(
 			specPtr->customPtr->clientData, interp, tkwin,
-			value, widgRec, specPtr->offset) != TCL_OK) {
+			(char *)value, widgRec, specPtr->offset) != TCL_OK) {
 		    return TCL_ERROR;
 		}
 		break;
@@ -737,7 +737,7 @@ FormatConfigInfo(interp, tkwin, specPtr, widgRec)
     argv[2] = specPtr->dbClass;
     argv[3] = specPtr->defValue;
     if (specPtr->type == TK_CONFIG_SYNONYM) {
-	return Tcl_Merge(2, argv);
+	return Tcl_Merge(2, (char * CONST *)argv);
     }
     argv[4] = FormatConfigValue(interp, tkwin, specPtr, widgRec, buffer,
 	    &freeProc);
@@ -768,10 +768,10 @@ FormatConfigInfo(interp, tkwin, specPtr, widgRec)
 
 
         argv[5] = conftypes[specPtr->type];
-        result = Tcl_Merge(6, argv);
+        result = Tcl_Merge(6, (char * CONST *)argv);
 
     } else {
-        result = Tcl_Merge(5, argv);
+        result = Tcl_Merge(5, (char * CONST *)argv);
     }
     if (freeProc != NULL) {
 	if ((freeProc == TCL_DYNAMIC) || (freeProc == (Tcl_FreeProc *) free)) {

@@ -452,9 +452,9 @@ static void DestroySource _ANSI_ARGS_((Source * srcPtr));
 static void SourceEventProc _ANSI_ARGS_((ClientData clientData,
 	XEvent *eventPtr));
 static int ConfigureSource _ANSI_ARGS_((Tcl_Interp *interp, Source * srcPtr,
-	int argc, char **argv, int flags));
+	int argc, CONST char **argv, int flags));
 static int ConfigureToken _ANSI_ARGS_((Tcl_Interp *interp, Source * srcPtr,
-	int argc, char **argv));
+	int argc, CONST char **argv));
 
 static Target *CreateTarget _ANSI_ARGS_((Tcl_Interp *interp, Tk_Window tkwin));
 static Target *FindTarget _ANSI_ARGS_((Tk_Window tkwin));
@@ -1060,16 +1060,16 @@ ConfigureToken(interp, srcPtr, argc, argv)
     Tcl_Interp *interp;
     Source *srcPtr;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     Token *tokenPtr;
 
     tokenPtr = &(srcPtr->token);
-    if (Tk_ConfigureWidget(interp, srcPtr->tkwin, tokenConfigSpecs, argc, argv,
+    if (Blt_ConfigureWidget(interp, srcPtr->tkwin, tokenConfigSpecs, argc, argv,
 	    (char *)tokenPtr, TK_CONFIG_ARGV_ONLY) != TCL_OK) {
 	return TCL_ERROR;
     }
-    return ConfigureSource(interp, srcPtr, 0, (char **)NULL,
+    return ConfigureSource(interp, srcPtr, 0, (CONST char **)NULL,
 	TK_CONFIG_ARGV_ONLY);
 }
 
@@ -1161,7 +1161,7 @@ CreateSource(interp, pathName, newPtr)
     srcPtr->token.borderWidth = srcPtr->token.activeBorderWidth = 3;
     srcPtr->hashPtr = hPtr;
     Blt_InitHashTable(&(srcPtr->handlerTable), BLT_STRING_KEYS);
-    if (ConfigureSource(interp, srcPtr, 0, (char **)NULL, 0) != TCL_OK) {
+    if (ConfigureSource(interp, srcPtr, 0, (CONST char **)NULL, 0) != TCL_OK) {
 	DestroySource(srcPtr);
 	return NULL;
     }
@@ -1280,7 +1280,7 @@ ConfigureSource(interp, srcPtr, argc, argv, flags)
     Tcl_Interp *interp;		/* current interpreter */
     register Source *srcPtr;	/* drag&drop source widget record */
     int argc;			/* number of arguments */
-    char **argv;		/* argument strings */
+    CONST char **argv;		/* argument strings */
     int flags;			/* flags controlling interpretation */
 {
     unsigned long gcMask;
@@ -1293,7 +1293,7 @@ ConfigureSource(interp, srcPtr, argc, argv, flags)
     /*
      *  Handle the bulk of the options...
      */
-    if (Tk_ConfigureWidget(interp, srcPtr->tkwin, configSpecs, argc, argv,
+    if (Blt_ConfigureWidget(interp, srcPtr->tkwin, configSpecs, argc, argv,
 	    (char *)srcPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -2332,11 +2332,11 @@ static int
 TokenOp(interp, argc, argv)
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     Source *srcPtr;
 
-    if (GetSource(interp, argv[2], &srcPtr) != TCL_OK) {
+    if (GetSource(interp, (char *)argv[2], &srcPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     if ((argc > 3) && 
@@ -2408,7 +2408,7 @@ static int
 SourceOp(interp, argc, argv)
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     Source *srcPtr;
     int isNew;
@@ -2429,7 +2429,7 @@ SourceOp(interp, argc, argv)
     /*
      *  Find or create source info...
      */
-    srcPtr = CreateSource(interp, argv[2], &isNew);
+    srcPtr = CreateSource(interp, (char *)argv[2], &isNew);
     if (srcPtr == NULL) {
 	return TCL_ERROR;
     }

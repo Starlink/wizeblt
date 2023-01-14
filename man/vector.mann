@@ -1277,7 +1277,7 @@ widget).
 .CS
 #include <tcl.h>
 #include <blt.h>				
-...
+\&...
 Blt_Vector *vecPtr;
 double *newArr;
 FILE *f;

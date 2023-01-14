@@ -508,7 +508,7 @@ CreateProcess(interp, argc, argv, inputFile, outputFile, errorFile, pidPtr)
 	 * Reap the child process now if an error occurred during its
 	 * startup.
 	 */
-	Tcl_WaitPid((Tcl_Pid)pid, &status, WNOHANG);
+	Tcl_WaitPid((Tcl_Pid)(intptr_t)pid, &status, WNOHANG);
     }
     if (errPipeIn >= 0) {
 	CloseFile(errPipeIn);

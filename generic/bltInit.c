@@ -438,9 +438,9 @@ SetLibraryPath(interp)
 {
     Tcl_DString dString;
     CONST char *value;
+#ifndef TCL_ONLY
     static int tkisinit = 0;
     
-#ifndef TCL_ONLY
     if (!tkisinit) {
         struct TileHandlers *thPtr;
 
@@ -510,9 +510,11 @@ Blt_Init(interp)
     Tcl_Interp *interp;		/* Interpreter to add extra commands */
 {
     int flags;
+#ifdef USE_BLT_STUBS
     int dostub = 0;
+#endif
 
-    flags = (int)Tcl_GetAssocData(interp, BLT_THREAD_KEY, NULL);
+    flags = (intptr_t)Tcl_GetAssocData(interp, BLT_THREAD_KEY, NULL);
     if ((flags & BLT_TCL_CMDS) == 0) {
 	register Tcl_AppInitProc **p;
 	Tcl_Namespace *nsPtr;
@@ -571,7 +573,7 @@ Blt_Init(interp)
 	}
 #endif
 	Tcl_SetAssocData(interp, BLT_THREAD_KEY, NULL, 
-		(ClientData)(flags | BLT_TCL_CMDS));
+		(ClientData)(intptr_t)(flags | BLT_TCL_CMDS));
     }
 #ifndef TCL_ONLY
     if ((flags & BLT_TK_CMDS) == 0) {
@@ -607,7 +609,7 @@ Blt_Init(interp)
 	}
 	Blt_InitEpsCanvasItem(interp);
 	Tcl_SetAssocData(interp, BLT_THREAD_KEY, NULL, 
-		(ClientData)(flags | BLT_TK_CMDS));
+		(ClientData)(intptr_t)(flags | BLT_TK_CMDS));
     }
 #endif
     return TCL_OK;

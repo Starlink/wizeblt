@@ -58,7 +58,8 @@ command. <BR>
 label .l -bitmap gray1<BR>
 </CODE><P>Tk will recognize "gray1" as a bitmap which can now be used with any widget
 that accepts bitmaps. <BR>
-<CODE></CODE><P>The bitmap data can be specified in a mulitude of forms. The following commands
+<CODE>.barchart element configure elem1 -stipple gray1<BR>
+</CODE><P>The bitmap data can be specified in a multitude of forms. The following commands
 are all equivalent. <BR>
 <CODE>bitmap define gray1 {<BR>
     #define gray1_width 2<BR>
@@ -128,7 +129,7 @@ in degrees. It defaults to <I>0.0</I> degrees. </DD>
 <DD>Specifies the scale of
 the bitmap. <I>Value</I> is a real number representing the scale.  A scale of 1.0
 indicates no scaling is necessary, while 2.0 would double the size of the
-bitmap.  There is no way to specify differents scales for the width and
+bitmap.  There is no way to specify different scales for the width and
 height of the bitmap. The default scale is <I>1.0</I>. </DD>
 </DL>
 </blockquote>
@@ -161,7 +162,7 @@ are available. <blockquote></DD>
 <DT><B>-scale <I>value</I></B> </DT>
 <DD>Specifies how to scale the bitmap. <I>Value</I> is a real number representing
 the scale.  A scale of 1.0 indicates no scaling is necessary, while 2.0 would
-double the size of the bitmap.  There is no way to specify differents scales
+double the size of the bitmap.  There is no way to specify different scales
 for the width and height of the bitmap. The default scale is <I>1.0</I>. </DD>
 </DL>
 </blockquote>

@@ -122,7 +122,7 @@ following options are available for <B>bgexec</B>:
 Specifies the encoding of the stderr channel. This affects only data returned
 to the Tcl interpreter.  No translation  is done on file redirection. <BR>
 For example if data is to be converted from Unicode for use in Tcl, you
-would use the "unicode" encoding. The default is that no  tranlation is
+would use the "unicode" encoding. The default is that no  translation is
 performed. </DD>
 
 <DT><B>-decodeoutput <I>encodingName</I></B>  </DT>
@@ -130,7 +130,7 @@ performed. </DD>
 Specifies the encoding of the stdout channels. This affects only data returned
 to the Tcl interpreter.  No translation  is done on file redirection. <BR>
 For example if data is to be converted from Unicode for use in Tcl, you
-would use the "unicode" encoding. The default is that no  tranlation is
+would use the "unicode" encoding. The default is that no  translation is
 performed. </DD>
 
 <DT><B>-error <I>varName</I></B>  </DT>
@@ -234,7 +234,7 @@ handle and save the output in a variable. <BR>
 <P>
 </CODE><P>The biggest advantage of <B>bgexec</B> is that, unlike <B>fileevent</B>, it requires
 no additional Tcl code to run a program.  It's simpler and less error prone.
- You don't have to worry about non-blocking I/O. It's handled tranparently
+ You don't have to worry about non-blocking I/O. It's handled transparently
 for you. <P>
 <B>Bgexec</B> runs programs that <B>fileevent</B> can not. <B>Fileevent</B> assumes that
 the when stdout is closed the program has completed.  But some programs,

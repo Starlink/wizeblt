@@ -827,10 +827,10 @@ Blt_GetUid(string)
     if (isNew) {
 	refCount = 0;
     } else {
-	refCount = (int)Blt_GetHashValue(hPtr);
+	refCount = (intptr_t)Blt_GetHashValue(hPtr);
     }
     refCount++;
-    Blt_SetHashValue(hPtr, (ClientData)refCount);
+    Blt_SetHashValue(hPtr, (intptr_t)refCount);
     return (Blt_Uid)Blt_GetHashKey(&uidTable, hPtr);
 }
 
@@ -864,12 +864,12 @@ Blt_FreeUid(uid)
     if (hPtr) {
 	int refCount;
 
-	refCount = (int)Blt_GetHashValue(hPtr);
+	refCount = (intptr_t)Blt_GetHashValue(hPtr);
 	refCount--;
 	if (refCount == 0) {
 	    Blt_DeleteHashEntry(&uidTable, hPtr);
 	} else {
-	    Blt_SetHashValue(hPtr, (ClientData)refCount);
+	    Blt_SetHashValue(hPtr, (intptr_t)refCount);
 	}
     } else {
 	fprintf(stderr, "tried to release unknown identifier \"%s\"\n", uid);

@@ -1177,9 +1177,15 @@ DisplayTextbox(clientData)
 	rightPos = count;
 	if ((rightPos < tbPtr->selFirst) || (leftPos > tbPtr->selLast)) {
 	    /* No part of the text fragment is selected. */
+#ifdef TK_DRAWCHARS_ANGLE
+	    Tk_DrawChars(tbPtr->display, drawable, tbPtr->gc, 
+			 tbPtr->font, fragPtr->text, fragPtr->count, 
+			 x + fragPtr->x, y + fragPtr->y, 0.);
+#else
 	    Tk_DrawChars(tbPtr->display, drawable, tbPtr->gc, 
 			 tbPtr->font, fragPtr->text, fragPtr->count, 
 			 x + fragPtr->x, y + fragPtr->y);
+#endif
 	    continue;
 	}
 
@@ -1221,9 +1227,15 @@ DisplayTextbox(clientData)
 	        width, fontMetrics.linespace,
 		tbPtr->selBorderWidth, tbPtr->selRelief);
 	}
+#ifdef TK_DRAWCHARS_ANGLE
+	Tk_DrawChars(Tk_Display(tbPtr->tkwin), drawable, tbPtr->gc, 
+	     tbPtr->font, fragPtr->text, fragPtr->count, 
+		     fragPtr->x + x, fragPtr->y + y, 0.);
+#else
 	Tk_DrawChars(Tk_Display(tbPtr->tkwin), drawable, tbPtr->gc, 
 	     tbPtr->font, fragPtr->text, fragPtr->count, 
 	     fragPtr->x + x, fragPtr->y + y);
+#endif
     }
     if ((tbPtr->flags & TEXTBOX_FOCUS) && (tbPtr->cursorOn)) {
 	int left, top, right, bottom;

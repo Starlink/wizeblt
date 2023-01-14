@@ -82,9 +82,9 @@ label .l -bitmap gray1
 Tk will recognize "gray1" as a bitmap which can now be used with any
 widget that accepts bitmaps.
 .CS
-.barchart element configure elem1 -stipple gray1
+\&.barchart element configure elem1 -stipple gray1
 .CE
-The bitmap data can be specified in a mulitude of forms.
+The bitmap data can be specified in a multitude of forms.
 The following commands are all equivalent.
 .CS
 bitmap define gray1 {

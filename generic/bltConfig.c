@@ -442,7 +442,7 @@ Blt_StringToFlag(clientData, interp, tkwin, string, widgRec, offset)
     char *widgRec;		/* Cubicle structure record */
     int offset;			/* Offset of style in record */
 {
-    unsigned int mask = (unsigned int)clientData;	/* Bit to be tested */
+    unsigned int mask = (uintptr_t)clientData;	/* Bit to be tested */
     int *flagPtr = (int *)(widgRec + offset);
     int bool;
 
@@ -478,7 +478,7 @@ Blt_FlagToString(clientData, tkwin, widgRec, offset, freeProcPtr)
     int offset;			/* Offset of fill in widget record */
     Tcl_FreeProc **freeProcPtr;	/* Not Used. */
 {
-    unsigned int mask = (unsigned int)clientData;	/* Bit to be tested */
+    unsigned int mask = (uintptr_t)clientData;	/* Bit to be tested */
     unsigned int bool = *(unsigned int *)(widgRec + offset);
 
     return (bool & mask) ? "1" : "0";
@@ -559,7 +559,7 @@ StringToDistance(clientData, interp, tkwin, string, widgRec, offset)
     int offset;			/* Offset of pixel size in record */
 {
     int *valuePtr = (int *)(widgRec + offset);
-    return Blt_GetPixels(interp, tkwin, string, (int)clientData, valuePtr);
+    return Blt_GetPixels(interp, tkwin, string, (intptr_t)clientData, valuePtr);
 }
 
 /*
@@ -648,7 +648,7 @@ StringToCount(clientData, interp, tkwin, string, widgRec, offset)
     int offset;			/* Offset of pixel size in record */
 {
     int *valuePtr = (int *)(widgRec + offset);
-    return Blt_GetInt(interp, string, (int)clientData, valuePtr);
+    return Blt_GetInt(interp, string, (intptr_t)clientData, valuePtr);
 }
 
 /*
@@ -977,6 +977,7 @@ StringToGradient(clientData, interp, tkwin, string, widgRec, offset)
     int dropOffset;
 
     colorPtr = NULL;
+    color2Ptr = NULL;
     dropOffset = 0;
     if ((string != NULL) && (string[0] != '\0')) {
 	int nElem;
@@ -1545,7 +1546,7 @@ Blt_ConfigureWidgetComponent(interp, parent, resName, className, specsPtr,
     Tk_Window tkwin;
     int result;
     char *tempName;
-    char *oldClass;
+    CONST char *oldClass;
     int isTemporary = FALSE;
 
     tempName = Blt_Strdup(resName);
@@ -1573,7 +1574,7 @@ Blt_ConfigureWidgetComponent(interp, parent, resName, className, specsPtr,
     Blt_Free(tempName);
 
     Tk_SetClass(tkwin, className);
-    result = Tk_ConfigureWidget(interp, tkwin, specsPtr, argc, argv, widgRec,
+    result = Blt_ConfigureWidget(interp, tkwin, specsPtr, argc, (CONST char **)argv, widgRec,
 	flags);
     if (isTemporary) {
 	Tk_DestroyWindow(tkwin);

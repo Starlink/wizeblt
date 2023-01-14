@@ -58,7 +58,7 @@ The following example gets the node from a serial number.
 unsigned int number;
 Blt_TreeNode node;
 Blt_TreeToken token;
-...
+\&...
 node = Blt_TreeGetNode(token, number);
 if (node == NULL) {
     printf("no node with ID %d exists\\n", number);

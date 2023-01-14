@@ -40,14 +40,23 @@ Blt_ReallocProc *Blt_ReallocProcPtr = (Blt_ReallocProc *)Tcl_Realloc;
  * Tcl_Alloc/Tcl_Free routines because they don't automatically cause
  * a panic when not enough memory is available. There are cases (such 
  * as allocating a very large vector) where it's recoverable.
+ *
+ * Using private is dangerous.
+ * Tcl changes mem functions for debug which will conflict then with BLT
+ * stick to public API
  */
-EXTERN Blt_MallocProc TclpAlloc;
-EXTERN Blt_FreeProc TclpFree;
-EXTERN Blt_ReallocProc TclpRealloc;
+//EXTERN Blt_MallocProc TclpAlloc;
+//EXTERN Blt_FreeProc TclpFree;
+//EXTERN Blt_ReallocProc TclpRealloc;
 
-Blt_MallocProc *Blt_MallocProcPtr = TclpAlloc;
-Blt_FreeProc *Blt_FreeProcPtr = TclpFree; 
-Blt_ReallocProc *Blt_ReallocProcPtr = TclpRealloc; 
+//Blt_MallocProc *Blt_MallocProcPtr = TclpAlloc;
+//Blt_FreeProc *Blt_FreeProcPtr = TclpFree; 
+//Blt_ReallocProc *Blt_ReallocProcPtr = TclpRealloc;
+
+Blt_MallocProc *Blt_MallocProcPtr = (Blt_MallocProc *)Tcl_Alloc;
+Blt_FreeProc *Blt_FreeProcPtr = (Blt_FreeProc *)Tcl_Free; 
+Blt_ReallocProc *Blt_ReallocProcPtr = (Blt_ReallocProc *)Tcl_Realloc; 
+
 #else
 
 Blt_MallocProc *Blt_MallocProcPtr = malloc;

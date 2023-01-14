@@ -7,23 +7,11 @@ proc LoadBLT25 { version dir } {
     regsub {\.} $version {} version_no_dots
     set versuf $version$suffix
 
+    set taillib ${versuf}.[info tclversion]
+
     # Determine whether to load the full BLT library or
     # the "lite" tcl-only version.
     
-   if {[package vcompare [info tclversion] 8.2] < 0} {
-        set taillib ${versuf}.8.0
-    } elseif {[package vcompare [info tclversion] 8.3] < 0} {
-        set taillib ${versuf}.8.2
-    } elseif {[package vcompare [info tclversion] 8.4] < 0} {
-        set taillib ${versuf}.8.3
-    } elseif {[package vcompare [info tclversion] 8.5] < 0} {
-        set taillib ${versuf}.8.4
-    } elseif {[package vcompare [info tclversion] 8.6] < 0} {
-        set taillib ${versuf}.8.5
-    } else {
-        set taillib ${versuf}.8.6
-    }
-
     if { [info commands tk] == "tk" } {
         set name1 ${prefix}BLT.${taillib}
         set name2 ${prefix}BLT${version_no_dots}${suffix}
@@ -49,11 +37,13 @@ proc LoadBLT25 { version dir } {
         }
 	if { ![file exists $library] } continue
         load $library BLT
+	break
     }
 }
 
 set version "%VERSION%"
+set patchlevel %PATCHLEVEL%
 
-package ifneeded BLT $version [list LoadBLT25 $version $dir]
+package ifneeded BLT $patchlevel [list LoadBLT25 $version $dir]
 
 # End of package index file

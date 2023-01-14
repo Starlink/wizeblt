@@ -5,6 +5,7 @@
 prefix       = @prefix@
 exec_prefix  = @exec_prefix@
 version      = @BLT_VERSION@
+patchlevel   = @BLT_PATCH_LEVEL@
 lib_prefix    = @BLT_LIB_PREFIX@
 srcdir       = @srcdir@
 libdir       = @libdir@
@@ -29,34 +30,36 @@ miscFiles     = \
 		tabnotebook.tcl \
 		tabset.tcl \
 		treeview.tcl \
+		ZoomStack.itcl \
 		tvutil.tcl \
 		init.tcl \
 		tclIndex \
 		$(cursors)
 
-ddFiles      =  dd-color.tcl \
-		dd-file.tcl \
-		dd-number.tcl \
-		dd-text.tcl \
-		tclIndex
+#ddFiles      =  dd-color.tcl \
+#		dd-file.tcl \
+#		dd-number.tcl \
+#		dd-text.tcl \
+#		tclIndex
 
 instdirs     =  $(prefix) $(exec_prefix) \
-		$(libdir) $(prefix)/lib $(scriptdir) $(scriptdir)/dd_protocols
+		$(libdir) $(prefix)/lib $(scriptdir) #$(scriptdir)/dd_protocols
 
 all: pkgIndex
 
 pkgIndex: 
 	rm -f pkgIndex.tcl
 	sed -e 's/%VERSION%/$(version)/' $(srcdir)/pkgIndex.tcl.in | \
+	sed -e 's/%PATCHLEVEL%/$(patchlevel)/' | \
 	sed -e 's/%LIB_PREFIX%/$(lib_prefix)/' | \
 	sed -e 's;%LIB_DIR%;$(libdir);' > pkgIndex.tcl
 
 
 install: mkdirs pkgIndex
-	for i in $(ddFiles) ; do \
-	    $(INSTALL_DATA) $(srcdir)/dd_protocols/$$i \
-			$(INSTALL_ROOT)$(scriptdir)/dd_protocols ; \
-	done 
+	#for i in  ; do \
+	#    $(INSTALL_DATA) $(srcdir)/dd_protocols/$$i \
+	#		$(INSTALL_ROOT)$(scriptdir)/dd_protocols ; \
+	#done 
 	for i in $(miscFiles) ; do \
 	    $(INSTALL_DATA) $(srcdir)/$$i $(INSTALL_ROOT)$(scriptdir) ; \
 	done 
@@ -68,7 +71,7 @@ mkdirs:
             : ; \
           else \
             echo " mkdir $(INSTALL_ROOT)$$i" ; \
-            mkdir $(INSTALL_ROOT)$$i ; \
+            mkdir -p $(INSTALL_ROOT)$$i ; \
           fi ; \
         done
 

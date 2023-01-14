@@ -574,7 +574,7 @@ Blt_DrawableToColorImage(tkwin, drawable, x, y, width, height, inputGamma)
 	destPtr = Blt_ColorImageBits(image);
 	endPtr = destPtr + nPixels;
 	for (/* empty */; destPtr < endPtr; destPtr++) {
-	    hPtr = Blt_FindHashEntry(&pixelTable, (char *)destPtr->value);
+	    hPtr = Blt_FindHashEntry(&pixelTable, (char *)(intptr_t)destPtr->value);
 	    colorPtr = (XColor *)Blt_GetHashValue(hPtr);
 	    destPtr->Red = lut[colorPtr->red >> 8];
 	    destPtr->Green = lut[colorPtr->green >> 8];

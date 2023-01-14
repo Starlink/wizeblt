@@ -1,4 +1,6 @@
-import add itcl
+#import add itcl
+package require Itcl
+namespace import itcl::*
 
 class ZoomStackGraph {
 
@@ -48,6 +50,7 @@ class ZoomStackGraph {
     private method SaveCoords { x y } 
     private method Zoom {}
     private method Unzoom {}
+    private method Empty {}
     private method Push { cmd }
     private method Pop {}
     private method MarkPoint { x y }

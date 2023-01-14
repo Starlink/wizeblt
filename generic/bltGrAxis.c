@@ -669,7 +669,7 @@ StringToTicks(clientData, interp, tkwin, string, widgRec, offset)
     char *widgRec;		/* Pointer to structure record. */
     int offset;			/* Offset of field in structure. */
 {
-    unsigned int mask = (unsigned int)clientData;
+    unsigned int mask = (uintptr_t)clientData;
     Axis *axisPtr = (Axis *)widgRec;
     Ticks **ticksPtrPtr = (Ticks **) (widgRec + offset);
     int nTicks;
@@ -1426,7 +1426,15 @@ LogScaleAxis(axisPtr, min, max)
 
     nMajor = nMinor = 0;
     majorStep = minorStep = 0.0;
-    if (min < max) {
+    if (min > max) {
+	double m;
+	m = min;
+	min = max;
+	max = m;
+    } else if (min == max) {
+	max = min + 1.0;
+    }
+    /* if (min < max) { */
 	min = (min != 0.0) ? log10(FABS(min)) : 0.0;
 	max = (max != 0.0) ? log10(FABS(max)) : 1.0;
 	
@@ -1474,7 +1482,7 @@ LogScaleAxis(axisPtr, min, max)
 	     (DEFINED(axisPtr->reqMax)))) {
 	    tickMax = max;
 	}
-    }
+    /* } */
     axisPtr->majorSweep.step = majorStep;
     axisPtr->majorSweep.initial = floor(tickMin);
     axisPtr->majorSweep.nSteps = nMajor;
@@ -1556,7 +1564,15 @@ LinearScaleAxis(axisPtr, min, max)
 
     nTicks = 0;
     tickMin = tickMax = 0.0;
-    if (min < max) {
+    if (min > max) {
+	double m;
+	m = min;
+	min = max;
+	max = m;
+    } else if (min == max) {
+	max = min + 1.0;
+    }
+    /* if (min < max) { */
 	range = max - min;
 	
 	/* Calculate the major tick stepping. */
@@ -1578,7 +1594,7 @@ LinearScaleAxis(axisPtr, min, max)
 	axisMax = tickMax = ceil(max / step) * step + 0.0;
 	
 	nTicks = Round((tickMax - tickMin) / step) + 1;
-    }
+    /* } */
     axisPtr->majorSweep.step = step;
     axisPtr->majorSweep.initial = tickMin;
     axisPtr->majorSweep.nSteps = nTicks;
@@ -3436,7 +3452,7 @@ ConfigureOp(graphPtr, axisPtr, argc, argv)
     Graph *graphPtr;
     Axis *axisPtr;
     int argc;
-    char *argv[];
+    CONST char *argv[];
 {
     int flags;
 
@@ -3448,7 +3464,7 @@ ConfigureOp(graphPtr, axisPtr, argc, argv)
 	return Tk_ConfigureInfo(graphPtr->interp, graphPtr->tkwin, configSpecs,
 	    (char *)axisPtr, argv[0], flags);
     }
-    if (Tk_ConfigureWidget(graphPtr->interp, graphPtr->tkwin, configSpecs,
+    if (Blt_ConfigureWidget(graphPtr->interp, graphPtr->tkwin, configSpecs,
 	    argc, argv, (char *)axisPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -3671,7 +3687,7 @@ UseOp(graphPtr, axisPtr, argc, argv)
     int margin;
 
     /* TODO: fix bug where "$g xaxis x2" leaves x unavailable. */
-    margin = (int)argv[-1];
+    margin = (intptr_t)argv[-1];
     chainPtr = graphPtr->margins[margin].axes;
     if (argc == 0) {
 	for (linkPtr = Blt_ChainFirstLink(chainPtr); linkPtr!= NULL;
@@ -4215,7 +4231,7 @@ Blt_AxisOp(graphPtr, margin, argc, argv)
 	return TCL_ERROR;
     }
     if (proc == UseOp) {
- 	argv[2] = (char *)margin; /* Hack. Slide a reference to the margin in 
+ 	argv[2] = (char *)(intptr_t)margin; /* Hack. Slide a reference to the margin in 
  				   * the argument list. Needed only for UseOp.
  				   */
  	result = (*proc)(graphPtr, NULL, argc - 3, argv +3);

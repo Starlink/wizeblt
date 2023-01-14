@@ -58,9 +58,7 @@ BeepCmd(clientData, interp, argc, argv)
 	    argv[0], " ?volumePercent?\"", (char *)NULL);
 	return TCL_ERROR;
     }
-    if (argc == 1) {
-	percent = 50;		/* Default setting */
-    } else if (argc == 2) {
+    if (argc == 2) {
 	if (Tcl_GetInt(interp, argv[1], &percent) != TCL_OK) {
 	    return TCL_ERROR;
 	}
@@ -69,6 +67,8 @@ BeepCmd(clientData, interp, argc, argv)
 		argv[1], "\"", (char *)NULL);
 	    return TCL_ERROR;
 	}
+    } else {
+	percent = 50;		/* Default setting */
     }
     XBell(Tk_Display(Tk_MainWindow(interp)), percent);
     return TCL_OK;

@@ -306,10 +306,14 @@ static void DestroyEditor _ANSI_ARGS_((DestroyData destroyData));
 static void DisplayTed _ANSI_ARGS_((ClientData clientData));
 static void DestroyTed _ANSI_ARGS_((DestroyData destroyData));
 static void DisplayEntry _ANSI_ARGS_((ClientData clientData));
+#if 0
 static void DestroyEntry _ANSI_ARGS_((DestroyData destoryData));
+#endif
 
 static Tcl_CmdProc TedCmd;
+#if 0
 static Tk_EventProc EntryEventProc;
+#endif
 static Tk_EventProc TedEventProc;
 
 /*
@@ -360,6 +364,7 @@ EventuallyRedraw(tedPtr)
  *
  *----------------------------------------------------------------------
  */
+#if 0
 static void
 EventuallyRedrawEntry(repPtr)
     EntryRep *repPtr;		/* Information about editor. */
@@ -369,6 +374,7 @@ EventuallyRedrawEntry(repPtr)
 	Tcl_DoWhenIdle(DisplayEntry, repPtr);
     }
 }
+#endif
 
 /*
  * --------------------------------------------------------------
@@ -387,6 +393,7 @@ EventuallyRedrawEntry(repPtr)
  *
  * --------------------------------------------------------------
  */
+#if 0
 static void
 EntryEventProc(clientData, eventPtr)
     ClientData clientData;	/* Information about window. */
@@ -408,6 +415,7 @@ EntryEventProc(clientData, eventPtr)
 	Tcl_EventuallyFree(repPtr, DestroyEntry);
     }
 }
+#endif
 
 /*
  * --------------------------------------------------------------
@@ -548,6 +556,7 @@ CreateEventWindow(tedPtr)
  *
  * ----------------------------------------------------------------------------
  */
+#if 0
 static int
 CreateEntry(tedPtr, entryPtr)
     Ted *tedPtr;
@@ -614,6 +623,7 @@ DestroyEntry(data)
 	}
     }
 }
+#endif
 
 /*
  * ----------------------------------------------------------------------------
@@ -819,14 +829,14 @@ static int
 ConfigureTed(tedPtr, argc, argv, flags)
     Ted *tedPtr;
     int argc;
-    char **argv;		/* Option-value pairs */
+    CONST char **argv;		/* Option-value pairs */
     int flags;
 {
     XGCValues gcValues;
     GC newGC;
     unsigned long gcMask;
 
-    if (Tk_ConfigureWidget(tedPtr->interp, tedPtr->tkwin, configSpecs,
+    if (Blt_ConfigureWidget(tedPtr->interp, tedPtr->tkwin, configSpecs,
 	    argc, argv, (char *)tedPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -1504,7 +1514,7 @@ EditOp(dataPtr, interp, argc, argv)
 	tablePtr->flags |= ARRANGE_PENDING;
 	Tcl_DoWhenIdle(tablePtr->arrangeProc, tablePtr);
     }
-    interp->result = Tk_PathName(tedPtr->tkwin);
+    Tcl_SetResult(interp, (char*)Tk_PathName(tedPtr->tkwin), TCL_VOLATILE);
     tedPtr->flags |= LAYOUT_PENDING;
     EventuallyRedraw(tedPtr);
     return TCL_OK;
@@ -1678,7 +1688,7 @@ SelectOp(dataPtr, interp, argc, argv)
 	    tedPtr->activeRectArr[4].width = grip - 1;
 	    tedPtr->activeRectArr[4].height = grip - 1;
 
-	    interp->result = Tk_PathName(entryPtr->tkwin);
+	    Tcl_SetResult(interp, (char*)Tk_PathName(entryPtr->tkwin), TCL_VOLATILE);
 	    active = 1;
 	    break;
 	}
@@ -1751,7 +1761,7 @@ RepOp(dataPtr, interp, argc, argv)
 	tablePtr->flags |= ARRANGE_PENDING;
 	Tcl_DoWhenIdle(tablePtr->arrangeProc, tablePtr);
     }
-    interp->result = Tk_PathName(tedPtr->tkwin);
+    Tcl_SetResult(interp, (char*)Tk_PathName(tedPtr->tkwin), TCL_VOLATILE);
     tedPtr->flags |= LAYOUT_PENDING;
     EventuallyRedraw(tedPtr);
     return TCL_OK;

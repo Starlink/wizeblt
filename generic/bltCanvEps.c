@@ -1136,7 +1136,7 @@ ConfigureEps(interp, canvas, itemPtr, argc, argv, flags)
     Tk_Canvas canvas;		/* Canvas containing itemPtr. */
     Tk_Item *itemPtr;		/* EPS item to reconfigure. */
     int argc;			/* Number of elements in argv.  */
-    char **argv;		/* Arguments describing things to configure. */
+    CONST char **argv;		/* Arguments describing things to configure. */
     int flags;			/* Flags to pass to Tk_ConfigureWidget. */
 {
     EpsItem *epsPtr = (EpsItem *)itemPtr;
@@ -1147,7 +1147,7 @@ ConfigureEps(interp, canvas, itemPtr, argc, argv, flags)
     int width, height;
 
     tkwin = Tk_CanvasTkwin(canvas);
-    if (Tk_ConfigureWidget(interp, tkwin, configSpecs, argc,
+    if (Blt_ConfigureWidget(interp, tkwin, configSpecs, argc,
 	    argv, (char *)epsPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -1282,10 +1282,10 @@ ConfigureEps(interp, canvas, itemPtr, argc, objv, flags)
     unsigned long gcMask;
     GC newGC;
     int width, height, i;
-    char **argv;
+    CONST char **argv;
 
     tkwin = Tk_CanvasTkwin(canvas);
-    argv = (char**)ckalloc((argc+1)*sizeof(char*));
+    argv = (CONST char **)ckalloc((argc+1)*sizeof(char*));
     for (i=0; i<argc; i++) {
         argv[i] = Tcl_GetString(objv[i]);
     }
@@ -1974,10 +1974,10 @@ static Tk_ItemType epsItemType =
 {
     "eps",			/* name */
     sizeof(EpsItem),		/* itemSize */
-    CreateEps,			/* createProc */
+    (Tk_ItemCreateProc *)CreateEps,			/* createProc */
     configSpecs,		/* configSpecs */
-    ConfigureEps,		/* configureProc */
-    EpsCoords,			/* coordProc */
+    (Tk_ItemConfigureProc *)ConfigureEps,		/* configureProc */
+    (Tk_ItemCoordProc *)EpsCoords,			/* coordProc */
     DeleteEps,			/* deleteProc */
     DisplayEps,			/* displayProc */
 #ifdef USE_OLD_CANVAS
@@ -2005,6 +2005,6 @@ Blt_InitEpsCanvasItem(interp)
 {
     Tk_CreateItemType(&epsItemType);
     /* Initialize custom canvas option routines. */
-    tagsOption.parseProc = Tk_CanvasTagsParseProc;
-    tagsOption.printProc = Tk_CanvasTagsPrintProc;
+    tagsOption.parseProc = (Tk_OptionParseProc *)Tk_CanvasTagsParseProc;
+    tagsOption.printProc = (Tk_OptionPrintProc *)Tk_CanvasTagsPrintProc;
 }

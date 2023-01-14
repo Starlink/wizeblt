@@ -301,7 +301,7 @@ static Tk_ConfigSpec configSpecs[] =
 static void ComputeScrollbarGeometry _ANSI_ARGS_((
 	Scrollbar *scrollPtr));
 static int ConfigureScrollbar _ANSI_ARGS_((Tcl_Interp *interp,
-	Scrollbar *scrollPtr, int argc, char **argv,
+	Scrollbar *scrollPtr, int argc, CONST char **argv,
 	int flags));
 static void DestroyScrollbar _ANSI_ARGS_((DestroyData *memPtr));
 static void DisplayScrollbar _ANSI_ARGS_((ClientData clientData));
@@ -434,7 +434,7 @@ scrollbarCmd(clientData, interp, argc, argv, stype)
     Tk_CreateEventHandler(scrollPtr->tkwin,
 	ExposureMask | StructureNotifyMask | FocusChangeMask,
 	ScrollbarEventProc, (ClientData)scrollPtr);
-    if (ConfigureScrollbar(interp, scrollPtr, argc - 2, argv + 2, 0) != TCL_OK) {
+    if (ConfigureScrollbar(interp, scrollPtr, argc - 2, (CONST char **)argv + 2, 0) != TCL_OK) {
 	goto error;
     }
     Tcl_SetResult(interp, Tk_PathName(scrollPtr->tkwin), TCL_VOLATILE);
@@ -558,7 +558,7 @@ ScrollbarWidgetCmd(clientData, interp, argc, argv)
 	    result = Tk_ConfigureInfo(interp, scrollPtr->tkwin, configSpecs,
 		(char *)scrollPtr, argv[2], 0);
 	} else {
-	    result = ConfigureScrollbar(interp, scrollPtr, argc - 2, argv + 2,
+	    result = ConfigureScrollbar(interp, scrollPtr, argc - 2, (CONST char **)argv + 2,
 		TK_CONFIG_ARGV_ONLY);
 	}
     } else if ((c == 'd') && (strncmp(argv[1], "delta", length) == 0)) {
@@ -588,7 +588,7 @@ ScrollbarWidgetCmd(clientData, interp, argc, argv)
 	} else {
 	    fraction = ((double)pixels / (double)barWidth);
 	}
-	sprintf(interp->result, "%g", fraction);
+	sprintf(Tcl_GetStringResult(interp), "%g", fraction);
     } else if ((c == 'f') && (strncmp(argv[1], "fraction", length) == 0)) {
 	int x, y, pos, barWidth;
 	double fraction;
@@ -904,7 +904,7 @@ ConfigureScrollbar(interp, scrollPtr, argc, argv, flags)
 					 * may not already have values for
 					 * some fields. */
     int argc;			/* Number of valid entries in argv. */
-    char **argv;		/* Arguments. */
+    CONST char **argv;		/* Arguments. */
     int flags;			/* Flags to pass to
 					 * Tk_ConfigureWidget. */
 {
@@ -913,7 +913,7 @@ ConfigureScrollbar(interp, scrollPtr, argc, argv, flags)
     GC new;
     Tk_Image image;
 
-    if (Tk_ConfigureWidget(interp, scrollPtr->tkwin, configSpecs,
+    if (Blt_ConfigureWidget(interp, scrollPtr->tkwin, configSpecs,
 	    argc, argv, (char *)scrollPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -1017,7 +1017,9 @@ DisplayScrollbar(clientData)
 {
     register Scrollbar *scrollPtr = clientData;
     register Tk_Window tkwin = scrollPtr->tkwin;
+#ifdef notdef
     XPoint points[7];
+#endif
     Tk_3DBorder border;
     int relief, width, elementBorderWidth;
     Pixmap pixmap;

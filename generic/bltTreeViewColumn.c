@@ -413,7 +413,6 @@ ObjToData(clientData, interp, tkwin, objPtr, widgRec, offset)
     char *string;
     int objc;
     register int i;
-    Blt_TreeNode node;
     TreeView *tvPtr;
 
     string = Tcl_GetString(objPtr);
@@ -431,7 +430,6 @@ ObjToData(clientData, interp, tkwin, objPtr, widgRec, offset)
 		 "\" must be in even name-value pairs", (char *)NULL);
 	return TCL_ERROR;
     }
-    node = entryPtr->node;
     tvPtr = entryPtr->tvPtr;
     for (i = 0; i < objc; i += 2) {
         int result;
@@ -709,11 +707,9 @@ TreeView *tvPtr;
 {
     int n = 0;
     Blt_ChainLink *linkPtr;
-    TreeViewColumn *columnPtr;
 
     for (linkPtr = Blt_ChainFirstLink(tvPtr->colChainPtr); linkPtr != NULL;
     linkPtr = Blt_ChainNextLink(linkPtr)) {
-        columnPtr = Blt_ChainGetValue(linkPtr);
         n++;
     }
     return n;
@@ -2477,7 +2473,7 @@ ColumnSeeOp(tvPtr, interp, objc, objv)
     Tcl_Obj *CONST *objv;
 {
     TreeViewColumn *colPtr;
-    int width, height;
+    int width;
     Tk_Anchor anchor;
     int left, right;
     char *string;
@@ -2508,7 +2504,6 @@ ColumnSeeOp(tvPtr, interp, objc, objv)
         return TCL_OK;
     }
     width = VPORTWIDTH(tvPtr);
-    height = VPORTHEIGHT(tvPtr);
 
     left = tvPtr->xOffset;
     right = tvPtr->xOffset + width;
@@ -3342,11 +3337,11 @@ Blt_TreeViewSortFlatView(tvPtr)
 	    Tcl_IncrRefCount(entryPtr->dataObjPtr);
 	}
     } else {
-	Blt_TreeKey key;
+	/*Blt_TreeKey key;*/
 	Tcl_Obj *objPtr;
 	int isFmt;
 
-	key = tvPtr->sortColumnPtr->key;
+	/*key = tvPtr->sortColumnPtr->key;*/
 	isFmt = Blt_TreeViewStyleIsFmt(tvPtr, tvPtr->sortColumnPtr->stylePtr);
         for(p = tvPtr->flatArr; *p != NULL; p++) {
             TreeViewValue *valuePtr;

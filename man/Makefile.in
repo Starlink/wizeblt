@@ -52,7 +52,7 @@ mkdirs:
             : ; \
           else \
             echo " mkdir $(INSTALL_ROOT)$$i" ; \
-            mkdir $(INSTALL_ROOT)$$i ; \
+            mkdir -p $(INSTALL_ROOT)$$i ; \
           fi ; \
 	done
 

@@ -1314,10 +1314,10 @@ Blt_TreeViewGetUid(TreeView *tvPtr, CONST char *string)
     if (isNew) {
 	refCount = 1;
     } else {
-	refCount = (int)Blt_GetHashValue(hPtr);
+	refCount = (intptr_t)Blt_GetHashValue(hPtr);
 	refCount++;
     }
-    Blt_SetHashValue(hPtr, (ClientData)refCount);
+    Blt_SetHashValue(hPtr, (ClientData)(intptr_t)refCount);
     return Blt_GetHashKey(&tvPtr->uidTable, hPtr);
 }
 
@@ -1343,10 +1343,10 @@ Blt_TreeViewFreeUid(TreeView *tvPtr, UID uid)
 
     hPtr = Blt_FindHashEntry(&tvPtr->uidTable, uid);
     assert(hPtr != NULL);
-    refCount = (int)Blt_GetHashValue(hPtr);
+    refCount = (intptr_t)Blt_GetHashValue(hPtr);
     refCount--;
     if (refCount > 0) {
-	Blt_SetHashValue(hPtr, (ClientData)refCount);
+	Blt_SetHashValue(hPtr, (ClientData)(intptr_t)refCount);
     } else {
 	Blt_DeleteHashEntry(&tvPtr->uidTable, hPtr);
     }
@@ -5042,7 +5042,7 @@ int Blt_TreeViewRedrawIcon(TreeView *tvPtr, TreeViewEntry *entryPtr,
         && strlen(Tcl_GetString(tvPtr->imageCmd))) {
         Tcl_DString cmdString;
         char *string;
-        int result, rcnt;
+        int /*result,*/ rcnt;
         Tcl_Interp *interp = tvPtr->interp;
 
         string = Blt_GetHashKey(&tvPtr->iconTable, icon->hashPtr);
@@ -5052,7 +5052,7 @@ int Blt_TreeViewRedrawIcon(TreeView *tvPtr, TreeViewEntry *entryPtr,
         if (entryPtr) Tcl_Preserve(entryPtr);
         if (columnPtr) Tcl_Preserve(columnPtr);
         Blt_TreeViewPercentSubst(tvPtr, entryPtr, columnPtr, Tcl_GetString(tvPtr->imageCmd), string, &cmdString);
-        result = Tcl_GlobalEval(interp, Tcl_DStringValue(&cmdString));
+        /* result = */ Tcl_GlobalEval(interp, Tcl_DStringValue(&cmdString));
         rcnt = icon->refCount;
         Blt_TreeViewFreeIcon(tvPtr, icon);
         if ((tvPtr->flags & TV_DELETED)
@@ -5286,10 +5286,10 @@ Blt_TreeViewGetEntryIcon(TreeView *tvPtr, TreeViewEntry *entryPtr)
     TreeViewIcon *icons;
     TreeViewIcon icon;
 
-    int isActive, hasFocus;
+    int isActive/*, hasFocus*/;
 
     isActive = (entryPtr == tvPtr->activePtr);
-    hasFocus = (entryPtr == tvPtr->focusPtr);
+    /*hasFocus = (entryPtr == tvPtr->focusPtr);*/
     icons = NULL;
     if (tvPtr->flags & TV_HIDE_ICONS) {
         return NULL;
@@ -5879,9 +5879,9 @@ DrawTitle(
     int x0, cx, xOffset;
     TreeViewStyle *sPtr;
     TreeViewIcon icon;
-    int mw, mh;
+    int mw/*, mh*/;
     mw = Tk_Width(tvPtr->tkwin) - tvPtr->padX;
-    mh = Tk_Height(tvPtr->tkwin) - tvPtr->padY;
+    /* mh = Tk_Height(tvPtr->tkwin) - tvPtr->padY; */
 
     if (tvPtr->titleHeight < 1) {
 	return;

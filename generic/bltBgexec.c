@@ -559,6 +559,7 @@ NextBlock(sinkPtr, lengthPtr)
 	*lengthPtr = length;
 	return string;
     }
+    *lengthPtr = length;
     return NULL;
 }
 
@@ -603,6 +604,7 @@ NextLine(sinkPtr, lengthPtr)
 	    return string;
 	}
     }
+    *lengthPtr = 0;
     return NULL;
 }
 /*
@@ -666,7 +668,7 @@ InitSink(bgPtr, sinkPtr, name, encoding)
     sinkPtr->name = name;
     sinkPtr->echo = FALSE;
     sinkPtr->fd = -1;
-    sinkPtr->file = (Tcl_File)NULL;
+    sinkPtr->file = (Tcl_File)0;
     sinkPtr->byteArr = sinkPtr->staticSpace;
     sinkPtr->size = DEF_BUFFER_SIZE;
     sinkPtr->encoding = encoding;
@@ -724,7 +726,7 @@ FreeSinkBuffer(sinkPtr)
 	Blt_Free(sinkPtr->byteArr);
     }
     sinkPtr->fd = -1;
-    sinkPtr->file = (Tcl_File)NULL;
+    sinkPtr->file = (Tcl_File)0;
 #if (TCL_MAJOR_VERSION >= 8)
     if (sinkPtr->objv != NULL) {
 	register int i;
@@ -881,7 +883,7 @@ CloseSink(bgPtr, interp, sinkPtr)
 #else
 	Tcl_DeleteFileHandler(sinkPtr->fd);
 #endif
-	sinkPtr->file = (Tcl_File)NULL;
+	sinkPtr->file = (Tcl_File)0;
 	sinkPtr->fd = -1;
 
 #if WINDEBUG
@@ -926,7 +928,7 @@ SinkCallback(interp, sinkPtr, status)
         Tcl_DStringInit(&dStr);
         GetSinkData(sinkPtr, &data, &length);
         Tcl_DStringAppend(&dStr, sinkPtr->command, -1);
-        Tcl_DStringAppendElement(&dStr, data);
+        Tcl_DStringAppendElement(&dStr, (char *)data);
         Tcl_DStringAppendElement(&dStr, status);
         if (Tcl_GlobalEval(interp, Tcl_DStringValue(&dStr)) != TCL_OK) {
             Tcl_BackgroundError(interp);

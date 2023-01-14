@@ -86,7 +86,7 @@ The size of the tabset window is determined the number of tiers of
 tabs and the sizes of the Tk widgets embedded inside each folder.
 The widest widget determines the width of the folder. The tallest
 determines the height.  If no folders contain an embedded widget, the
-size is detemined solely by the size of the tabs.  
+size is determined solely by the size of the tabs.
 .PP
 You can override either dimension with the tabset's \fB\-width\fR
 and \fB\-height\fR options.
@@ -767,7 +767,7 @@ be aligned with the leftmost edge of the folder. The default value is
 \fBcenter\fR.
 .TP
 \fB\-background \fIcolor\fR
-Sets the background color for \fInameOrIndex\fR.  Setting this option overides the 
+Sets the background color for \fInameOrIndex\fR.  Setting this option overrides the
 widget's \fB\-tabbackground\fR option.
 .TP
 \fB\-bindtags \fItagList\fR

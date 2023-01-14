@@ -393,7 +393,7 @@ in a cyclic copy.
 Reverse the direction of the copy.
 .TP
 \fB\-tags\fR
-Copy tag inforation.  Normally the following node is copied: its 
+Copy tag information.  Normally the following node is copied: its
 label and data fields.  This indicates to copy tags as well.
 .RE
 .TP
@@ -1804,7 +1804,7 @@ is one approach.
           set nams {}
           set vals {}
           foreach nam $s(*) {
-              lappend vals \$s($nam)
+              lappend vals $s($nam)
               lappend nams $nam
           }
           set vals [join $vals ,]

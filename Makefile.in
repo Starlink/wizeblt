@@ -66,10 +66,14 @@ clean:
 	(cd library; $(MAKE) clean)
 	(cd man; $(MAKE) clean)
 	(cd demos; $(MAKE) clean)
-	$(RM) *.bak *\~ "#"* *pure* .pure*
+	$(RM) *.bak *\~ "#"* .pure*
 
 GENERATED_FILES = \
 	config.status config.cache config.log Makefile 
 
 distclean: clean
+	(cd generic; $(MAKE) distclean)
+	(cd library; $(MAKE) distclean)
+	(cd man; $(MAKE) distclean)
+	(cd demos; $(MAKE) distclean)
 	$(RM) $(GENERATED_FILES)

@@ -1,3 +1,4 @@
+'\"
 '\" Copyright 1991-1997 by Bell Labs Innovations for Lucent Technologies.
 '\"
 '\" Permission to use, copy, modify, and distribute this software and its
@@ -2061,7 +2062,7 @@ in a binding script terminates that script, and a break command
 terminates that script and skips any remaining scripts for the event, 
 just as for the bind command.
 .sp
-The \fB\-bindtags\R option for these components controls addition
+The \fB\-bindtags\fR option for these components controls addition
 tag names which can be matched.  Implicitly elements and markers
 always have tags matching their names.  Setting the value of
 the \fB\-bindtags\fR option doesn't change this.
@@ -2160,9 +2161,8 @@ achieve the same results using the \fB\-hide\fR option instead.
 .CS
 # Works for now.
 \&.s legend configure -mapped no
-
 # Instead use this.
 \&.s legend configure -hide yes    
-.CE 
+.CE
 .SH KEYWORDS
 stripchart, graph, widget

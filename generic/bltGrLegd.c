@@ -1393,7 +1393,7 @@ ConfigureOp(graphPtr, interp, argc, argv)
     Graph *graphPtr;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     int flags = TK_CONFIG_ARGV_ONLY;
     Legend *legendPtr;
@@ -1406,7 +1406,7 @@ ConfigureOp(graphPtr, interp, argc, argv)
 	return Tk_ConfigureInfo(interp, graphPtr->tkwin, configSpecs,
 		(char *)legendPtr, argv[3], flags);
     }
-    if (Tk_ConfigureWidget(interp, graphPtr->tkwin, configSpecs, argc - 3,
+    if (Blt_ConfigureWidget(interp, graphPtr->tkwin, configSpecs, argc - 3,
 	    argv + 3, (char *)legendPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }

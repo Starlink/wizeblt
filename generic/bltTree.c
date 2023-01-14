@@ -47,7 +47,7 @@ static int IsTclDict(Tcl_Interp *interp,Tcl_Obj *objPtr) {
    if (dictType == NULL) {
         Tcl_Obj * obj;
         obj = Tcl_NewDictObj();
-        dictType = obj->typePtr;
+        dictType = (Tcl_ObjType *)obj->typePtr;
         Tcl_DecrRefCount(obj);
    }
    return (objPtr->typePtr == dictType);
@@ -114,15 +114,17 @@ static Value *TreeNextValue _ANSI_ARGS_((Blt_TreeKeySearch *srchPtr));
 
 #define REBUILD_MULTIPLIER	3
 
+#if (SIZEOF_VOID_P == 8)
+#define RANDOM_INDEX(i)		HashOneWord(mask, downshift, i)
+#define BITSPERWORD		64
+#define START_LOGSIZE		10 
+#define MAX_LIST_VALUES		40 
+#else 
+
 #define START_LOGSIZE		5 /* Initial hash table size is 32. */
 #define MAX_LIST_VALUES		21 /* Convert to hash table when node
 				    * value list gets bigger than this
 				    * many values. */
-
-#if (SIZEOF_VOID_P == 8)
-#define RANDOM_INDEX(i)		HashOneWord(mask, downshift, i)
-#define BITSPERWORD		64
-#else 
 
 /*
  * The following macro takes a preliminary integer hash value and
@@ -422,7 +424,7 @@ FreeNode(TreeObject *treeObjPtr, Node *nodePtr)
     TreeDestroyValues(nodePtr);
     UnlinkNode(nodePtr);
     treeObjPtr->nNodes--;
-    hPtr = Blt_FindHashEntry(&treeObjPtr->nodeTable, (char *)nodePtr->inode);
+    hPtr = Blt_FindHashEntry(&treeObjPtr->nodeTable, (char *)(intptr_t)nodePtr->inode);
     assert(hPtr);
     Blt_DeleteHashEntry(&treeObjPtr->nodeTable, hPtr);
     nodePtr->inode = -1;
@@ -932,7 +934,7 @@ Blt_TreeCreateNode(
     /* Generate an unique serial number for this node.  */
     do {
 	inode = treeObjPtr->nextInode++;
-	hPtr = Blt_CreateHashEntry(&treeObjPtr->nodeTable,(char *)inode, 
+	hPtr = Blt_CreateHashEntry(&treeObjPtr->nodeTable,(char *)(intptr_t)inode, 
 		   &isNew);
     } while (!isNew);
     nodePtr = NewNode(treeObjPtr, name, inode);
@@ -1028,7 +1030,7 @@ Blt_TreeCreateNodeWithId(
     int isNew, result;
 
     treeObjPtr = parentPtr->treeObject;
-    hPtr = Blt_CreateHashEntry(&treeObjPtr->nodeTable,(char *)inode, &isNew);
+    hPtr = Blt_CreateHashEntry(&treeObjPtr->nodeTable,(char *)(intptr_t)inode, &isNew);
     if (!isNew) {
 	return NULL;
     }
@@ -1164,7 +1166,7 @@ Blt_TreeGetNode(TreeClient *clientPtr, unsigned int inode)
     TreeObject *treeObjPtr = clientPtr->treeObject;
     Blt_HashEntry *hPtr;
 
-    hPtr = Blt_FindHashEntry(&treeObjPtr->nodeTable, (char *)inode);
+    hPtr = Blt_FindHashEntry(&treeObjPtr->nodeTable, (char *)(intptr_t)inode);
     if (hPtr != NULL) {
 	return (Blt_TreeNode)Blt_GetHashValue(hPtr);
     }
@@ -1177,7 +1179,7 @@ GetNode(TreeObject *treeObjPtr, unsigned int inode)
 {
     Blt_HashEntry *hPtr;
 
-    hPtr = Blt_FindHashEntry(&treeObjPtr->nodeTable, (char *)inode);
+    hPtr = Blt_FindHashEntry(&treeObjPtr->nodeTable, (char *)(intptr_t)inode);
     if (hPtr != NULL) {
 	return (Node*)Blt_GetHashValue(hPtr);
     }
@@ -1232,7 +1234,7 @@ Blt_TreeDeleteTrace(Blt_TreeTrace trace)
 int
 Blt_TreeRelabelNode(TreeClient *clientPtr, Node *nodePtr, CONST char *string)
 {
-    int result, inode;
+    int result;
     if ((result=NotifyClients(clientPtr, clientPtr->treeObject, nodePtr, 
 		  TREE_NOTIFY_RELABEL)) != TCL_OK) {
 	return result;
@@ -1243,7 +1245,6 @@ Blt_TreeRelabelNode(TreeClient *clientPtr, Node *nodePtr, CONST char *string)
      * been created.
      */
     SetModified(nodePtr);
-    inode = nodePtr->inode;
     result = NotifyClients(clientPtr, clientPtr->treeObject, nodePtr, 
 		  TREE_NOTIFY_RELABELPOST);
     return result;
@@ -3318,7 +3319,7 @@ Blt_TreeAddTag(
         if (tPtr->nodeTable.numEntries > 0) {
             flags |= TREE_TRACE_TAGMULTIPLE;
         }
-        result = CallTraces(interp, clientPtr, node->treeObject, node, tagName, 
+        result = CallTraces(interp, clientPtr, node->treeObject, node, (Blt_TreeKey)tagName, 
             flags, &cnt);
         if (result == TCL_BREAK) {
             return TCL_OK;
@@ -3347,7 +3348,7 @@ Blt_TreeTagDelTrace(
     int cnt;
     
     if (!(node->flags & TREE_TRACE_ACTIVE)) {
-        return CallTraces(interp, clientPtr, node->treeObject, node, tagName, 
+        return CallTraces(interp, clientPtr, node->treeObject, node, (Blt_TreeKey)tagName, 
             (TREE_TRACE_TAGDELETE), &cnt);
     }
     return TCL_OK;

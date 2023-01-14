@@ -1395,7 +1395,7 @@ node can be selected.
 The default is \fBsingle\fR.
 .TP
 \fB\-separator \fIstring\fR
-Specifies the character sequence to use when spliting the path components.  
+Specifies the character sequence to use when splitting the path components.
 The separator may be several characters wide (such as "::")
 Consecutive separators in a pathname are treated as one.
 If \fIstring\fR is the empty string, the pathnames are Tcl lists. 

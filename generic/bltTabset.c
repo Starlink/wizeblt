@@ -3154,7 +3154,7 @@ ConfigureTabset(
 			         * may not already have values for
 			         * some fields. */
     int argc,
-    char **argv,
+    CONST char **argv,
     int flags)
 {
     XGCValues gcValues;
@@ -3163,7 +3163,7 @@ ConfigureTabset(
     XColor *activeColor;	/* Active foreground. */
 
     tabSet = setPtr;
-    if (Tk_ConfigureWidget(interp, setPtr->tkwin, configSpecs, argc, argv,
+    if (Blt_ConfigureWidget(interp, setPtr->tkwin, configSpecs, argc, argv,
 	    (char *)setPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -3404,7 +3404,7 @@ ConfigureOp(
     Tabset *setPtr,
     Tcl_Interp *interp,
     int argc,
-    char **argv)
+    CONST char **argv)
 {
     tabSet = setPtr;
     if (argc == 2) {
@@ -3665,7 +3665,7 @@ InsertOp(
     } else {
 	Tab *beforePtr;
 
-	if (GetTabByIndName(setPtr, argv[2], &beforePtr) 
+	if (GetTabByIndName(setPtr, (char *)argv[2], &beforePtr) 
 	    != TCL_OK) {
 	    result = TCL_ERROR;
 	    goto finish;
@@ -3916,12 +3916,9 @@ NearestOp(setPtr, interp, argc, argv)
 {
     int x, y;			/* Screen coordinates of the test point. */
     Tab *tabPtr;
-    int dw, dh;
     char coords[200];
 
     coords[0] = 0;
-    dw = Tk_Width(setPtr->tkwin);
-    dh = Tk_Height(setPtr->tkwin);
     tabPtr = NULL;
     if ((Tk_GetPixels(interp, setPtr->tkwin, argv[2], &x) != TCL_OK) ||
 	(Tk_GetPixels(interp, setPtr->tkwin, argv[3], &y) != TCL_OK)) {
@@ -4415,10 +4412,10 @@ TabConfigureOp(setPtr, interp, argc, argv)
     Tabset *setPtr;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     int nTabs, nOpts, result;
-    char **options;
+    CONST char **options;
     register int i;
     Tab *tabPtr;
 
@@ -4452,7 +4449,7 @@ TabConfigureOp(setPtr, interp, argc, argv)
 	}
 	tabSet = setPtr;
 	Tcl_Preserve(tabPtr);
-	result = Tk_ConfigureWidget(interp, setPtr->tkwin, tabConfigSpecs,
+	result = Blt_ConfigureWidget(interp, setPtr->tkwin, tabConfigSpecs,
 	    nOpts, options, (char *)tabPtr, TK_CONFIG_ARGV_ONLY);
 	if (result == TCL_OK || nOpts>=2) {
 	    result = ConfigureTab(setPtr, tabPtr);
@@ -5247,17 +5244,13 @@ AdjustTabSizes(setPtr, nTabs)
     Tab *startPtr, *nextPtr;
     Blt_ChainLink *linkPtr;
     register Tab *tabPtr;
-    int x, maxWidth, sImg, eImg;
+    int x, maxWidth, sImg;
     int vert = (setPtr->side & SIDE_VERTICAL);
     
     sImg = 0;
-    eImg = 0;
 
     if (setPtr->startImage) {
         sImg = (vert?setPtr->startImage->height:setPtr->startImage->width);
-    }
-    if (setPtr->endImage) {
-        eImg = (vert?setPtr->endImage->height:setPtr->endImage->width);
     }
 
     tabsPerTier = (nTabs + (setPtr->nTiers - 1)) / setPtr->nTiers;
@@ -5771,20 +5764,21 @@ DrawLabel(setPtr, tabPtr, drawable)
      * side when correcting for left/right slants.
      */
     switch (setPtr->side) {
-    case SIDE_TOP:
-    case SIDE_BOTTOM:
-	if (setPtr->slant == SLANT_LEFT) {
-	    x += setPtr->overlap;
-	} else if (setPtr->slant == SLANT_RIGHT) {
-	    x -= setPtr->overlap;
-	}
-	break;
     case SIDE_LEFT:
     case SIDE_RIGHT:
 	if (setPtr->slant == SLANT_LEFT) {
 	    y += setPtr->overlap;
 	} else if (setPtr->slant == SLANT_RIGHT) {
 	    y -= setPtr->overlap;
+	}
+	break;
+    case SIDE_TOP:
+    case SIDE_BOTTOM:
+    default:
+	if (setPtr->slant == SLANT_LEFT) {
+	    x += setPtr->overlap;
+	} else if (setPtr->slant == SLANT_RIGHT) {
+	    x -= setPtr->overlap;
 	}
 	break;
     }
@@ -5817,7 +5811,7 @@ DrawLabel(setPtr, tabPtr, drawable)
 	iw = imgWidth = ImageWidth(image);
 	ih = imgHeight = ImageHeight(image);
     }
-    img2Width = img2Height = 0;
+    iw2 = ih2 = img2Width = img2Height = 0;
     if (image2 != NULL) {
         iw2 = img2Width = ImageWidth(image2);
         ih2 = img2Height = ImageHeight(image2);
@@ -5847,6 +5841,7 @@ DrawLabel(setPtr, tabPtr, drawable)
 	tx = x + (tabPtr->screenWidth - tabPtr->textWidth) / 2;
 	break;
     case SIDE_TOP:
+    default:
 	tx = x + (tabPtr->screenWidth - tabPtr->textWidth) / 2;
 	ty = y + dy + tabPtr->iPadY.side1 + IMAGE_PAD;
 	ix = x + (tabPtr->screenWidth - iw) / 2;
@@ -5915,6 +5910,7 @@ DrawLabel(setPtr, tabPtr, drawable)
         i2x = x + (tabPtr->screenWidth - iw2) / 2;
         break;
     case SIDE_TOP:
+    default:
         i2y = iy + imgHeight + IMAGE_PAD + setPtr->gapLeft;
         i2x = x + (tabPtr->screenWidth - iw2) / 2;
 	break;
@@ -6844,7 +6840,7 @@ TabsetCmd(clientData, interp, argc, argv)
 	return TCL_ERROR;
     }
     setPtr = CreateTabset(interp, tkwin);
-    if (ConfigureTabset(interp, setPtr, argc - 2, argv + 2, 0) != TCL_OK) {
+    if (ConfigureTabset(interp, setPtr, argc - 2, (CONST char **)argv + 2, 0) != TCL_OK) {
 	Tk_DestroyWindow(setPtr->tkwin);
 	return TCL_ERROR;
     }

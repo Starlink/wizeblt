@@ -2738,7 +2738,7 @@ Blt_MergeColorImage(src, src2, dest, opacity, opacity2, withColor)
     if (opacity2<0.0) {
         a1 = (1.0 - a2);
     } else {
-        a2 = (opacity2<0.0 ? 0.0 : (opacity2>1.0?1.0:opacity2));
+        a1 = (opacity2<0.0 ? 0.0 : (opacity2>1.0?1.0:opacity2));
     }
     
     for (endPtr = destPtr + count; destPtr < endPtr; srcPtr++, src2Ptr++, destPtr++) {
