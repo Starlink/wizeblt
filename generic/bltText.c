@@ -881,6 +881,9 @@ Blt_DrawTextLayout(tkwin, drawable, textPtr, tsPtr, x, y)
     Pixmap bitmap;
     int active;
 
+    if (!textPtr)
+	return;
+    
     display = Tk_Display(tkwin);
     theta = FMOD(tsPtr->theta, (double)360.0);
     if (theta < 0.0) {
@@ -900,7 +903,7 @@ Blt_DrawTextLayout(tkwin, drawable, textPtr, tsPtr, x, y)
 	    TkBorder *borderPtr = (TkBorder *) tsPtr->border;
 	    XColor *color1, *color2;
 
-	    color1 = borderPtr->lightColor, color2 = borderPtr->darkColor;
+	    color1 = borderPtr->lightColorPtr, color2 = borderPtr->darkColorPtr;
 	    if (tsPtr->state & STATE_EMPHASIS) {
 		XColor *hold;
 
@@ -965,7 +968,7 @@ Blt_DrawTextLayout(tkwin, drawable, textPtr, tsPtr, x, y)
 	TkBorder *borderPtr = (TkBorder *) tsPtr->border;
 	XColor *color1, *color2;
 
-	color1 = borderPtr->lightColor, color2 = borderPtr->darkColor;
+	color1 = borderPtr->lightColorPtr, color2 = borderPtr->darkColorPtr;
 	if (tsPtr->state & STATE_EMPHASIS) {
 	    XColor *hold;
 

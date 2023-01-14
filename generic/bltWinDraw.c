@@ -1647,8 +1647,13 @@ Blt_EmulateXDrawString(
     if (drawable == None) {
 	return;
     }
+#ifdef TK_DRAWCHARS_ANGLE
+    Tk_DrawChars(display, drawable, gc, (Tk_Font)gc->font, string, length, 
+		 x, y, 0.);
+#else
     Tk_DrawChars(display, drawable, gc, (Tk_Font)gc->font, string, length, 
 	x, y);
+#endif
 }
 
 static void

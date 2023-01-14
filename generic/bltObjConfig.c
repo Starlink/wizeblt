@@ -1338,7 +1338,7 @@ DoConfig(interp, tkwin, specPtr, objPtr, widgRec)
 		if (Tcl_GetBooleanFromObj(interp, objPtr, &bool) != TCL_OK) {
 		    return TCL_ERROR;
 		}
-		flag = (unsigned int)specPtr->customPtr;
+		flag = (uintptr_t)specPtr->customPtr;
 		*(int *)ptr &= ~flag;
 		if (bool) {
 		    *(int *)ptr |= flag;
@@ -1639,7 +1639,7 @@ FormatConfigValue(interp, tkwin, specPtr, widgRec)
 	{
 	    unsigned int flag;
 
-	    flag = (*(int *)ptr) & (unsigned int)specPtr->customPtr;
+	    flag = (*(unsigned int *)ptr) & (uintptr_t)specPtr->customPtr;
 	    return Tcl_NewBooleanObj((flag != 0));
 	}
 

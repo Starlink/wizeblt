@@ -895,7 +895,7 @@ Blt_Draw3DRectangleToPostScript(tokenPtr, border, x, y, width, height,
 	return;
     }
     if ((relief == TK_RELIEF_SOLID) ||
-	(borderPtr->lightColor == NULL) || (borderPtr->darkColor == NULL)) {
+	(borderPtr->lightColorPtr == NULL) || (borderPtr->darkColorPtr == NULL)) {
 	if (relief == TK_RELIEF_SOLID) {
 	    darkColor.red = darkColor.blue = darkColor.green = 0x00;
 	    lightColor.red = lightColor.blue = lightColor.green = 0x00;
@@ -903,7 +903,7 @@ Blt_Draw3DRectangleToPostScript(tokenPtr, border, x, y, width, height,
 	} else {
 	    Screen *screenPtr;
 
-	    lightColor = *borderPtr->bgColor;
+	    lightColor = *borderPtr->bgColorPtr;
 	    screenPtr = Tk_Screen(tokenPtr->tkwin);
 	    if (lightColor.pixel == WhitePixelOfScreen(screenPtr)) {
 		darkColor.red = darkColor.blue = darkColor.green = 0x00;
@@ -914,8 +914,8 @@ Blt_Draw3DRectangleToPostScript(tokenPtr, border, x, y, width, height,
 	lightColorPtr = &lightColor;
 	darkColorPtr = &darkColor;
     } else {
-	lightColorPtr = borderPtr->lightColor;
-	darkColorPtr = borderPtr->darkColor;
+	lightColorPtr = borderPtr->lightColorPtr;
+	darkColorPtr = borderPtr->darkColorPtr;
     }
 
 
@@ -944,7 +944,7 @@ Blt_Draw3DRectangleToPostScript(tokenPtr, border, x, y, width, height,
 	topColor = darkColorPtr;
 	bottomColor = lightColorPtr;
     } else {
-	topColor = bottomColor = borderPtr->bgColor;
+	topColor = bottomColor = borderPtr->bgColorPtr;
     }
     Blt_BackgroundToPostScript(tokenPtr, bottomColor);
     Blt_RectangleToPostScript(tokenPtr, x, y + height - borderWidth, width,
@@ -984,7 +984,7 @@ Blt_Fill3DRectangleToPostScript(tokenPtr, border, x, y, width, height,
      * Setting the pen color as foreground or background only affects
      * the plot when the colormode option is "monochrome".
      */
-    Blt_BackgroundToPostScript(tokenPtr, borderPtr->bgColor);
+    Blt_BackgroundToPostScript(tokenPtr, borderPtr->bgColorPtr);
     Blt_RectangleToPostScript(tokenPtr, x, y, width, height);
     Blt_Draw3DRectangleToPostScript(tokenPtr, border, x, y, width, height,
 	borderWidth, relief);

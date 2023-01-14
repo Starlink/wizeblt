@@ -260,7 +260,7 @@ StringToColorPair(clientData, interp, tkwin, string, widgRec, offset)
 {
     ColorPair *pairPtr = (ColorPair *)(widgRec + offset);
     ColorPair sample;
-    int allowDefault = (int)clientData;
+    int allowDefault = (intptr_t)clientData;
 
     sample.fgColor = sample.bgColor = NULL;
     if ((string != NULL) && (*string != '\0')) {

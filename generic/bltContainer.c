@@ -822,7 +822,7 @@ StringToXID(clientData, interp, parent, string, widgRec, offset)
     char *widgRec;		/* Widget record */
     int offset;			/* Offset to field in structure */
 {
-    unsigned int flags = (int)clientData;
+    unsigned int flags = (uintptr_t)clientData;
     Container *cntrPtr = (Container *)widgRec;
     Window *winPtr = (Window *) (widgRec + offset);
     Tk_Window tkAdopted;
@@ -1185,7 +1185,7 @@ ConfigureContainer(interp, cntrPtr, argc, argv, flags)
 			         * may not already have values for
 			         * some fields. */
     int argc;
-    char **argv;
+    CONST char **argv;
     int flags;
 {
     XGCValues gcValues;
@@ -1193,7 +1193,7 @@ ConfigureContainer(interp, cntrPtr, argc, argv, flags)
     GC newGC;
     int width, height;
 
-    if (Tk_ConfigureWidget(interp, cntrPtr->tkwin, configSpecs, argc, argv,
+    if (Blt_ConfigureWidget(interp, cntrPtr->tkwin, configSpecs, argc, argv,
 	    (char *)cntrPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }

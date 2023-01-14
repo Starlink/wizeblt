@@ -913,7 +913,7 @@ ColorsOp(clientData, interp, argc, argv)
     Tk_PhotoHandle srcPhoto;
     Tk_PhotoImageBlock src;
     Blt_ColorImage srcImage;
-    int top, x, y, isalph, iscnt, isNew, cnt;
+    int x, y, isalph, iscnt, isNew, cnt;
     int i, rng[4], from = 0;
     register Pix32 *srcPtr;
     Tcl_Obj *listPtr;
@@ -922,7 +922,6 @@ ColorsOp(clientData, interp, argc, argv)
     Blt_HashTable hTbl;
     Blt_HashSearch cursor;
 
-    top = 0;
     isalph = 0;
     iscnt = 0;
     while (argc > 3) {
@@ -981,9 +980,9 @@ ColorsOp(clientData, interp, argc, argv)
             if (isNew) {
                 Blt_SetHashValue(hPtr, 1);
             } else {
-                cnt = (int)Blt_GetHashValue(hPtr);
+                cnt = (intptr_t)Blt_GetHashValue(hPtr);
                 cnt++;
-                Blt_SetHashValue(hPtr, cnt);
+                Blt_SetHashValue(hPtr, (intptr_t)cnt);
             }
             srcPtr++;
         }
@@ -995,7 +994,7 @@ ColorsOp(clientData, interp, argc, argv)
         Tcl_Obj *objPtr = Tcl_NewStringObj(Blt_GetHashKey(&hTbl, hPtr), -1);
         Tcl_ListObjAppendElement(interp, listPtr, objPtr);
         if (iscnt) {
-            cnt = (int)Blt_GetHashValue(hPtr);
+            cnt = (intptr_t)Blt_GetHashValue(hPtr);
             sprintf(buf, "%d", cnt);
             objPtr = Tcl_NewStringObj(buf, -1);
             Tcl_ListObjAppendElement(interp, listPtr, objPtr);
@@ -1524,7 +1523,7 @@ GradientsOp(clientData, interp, argc, argv)
 {
     double range[3];
     double left[3];
-    int x, y, width;
+    int x, width;
     double t;
     XColor C;
     XColor *leftPtr, *rightPtr;
@@ -1554,7 +1553,6 @@ GradientsOp(clientData, interp, argc, argv)
     range[1] = (double)((rightPtr->green - leftPtr->green) / 257.0);
     range[2] = (double)((rightPtr->blue - leftPtr->blue) / 257.0);
 
-    y =0;
     for (x = 0; x < width; x++) {
         char cbuf[100];
         t = ((double)( sin(M_PI_2 * (double)x / (double)width)));
@@ -1574,7 +1572,7 @@ Blt_GetGradient(Tcl_Interp *interp, Tk_Window tkwin, Gradient *gradPtr) {
     XColor *leftPtr, *rightPtr;
     double range[3];
     double left[3];
-    int x, y, width;
+    int x, width;
     double t;
     XColor **destPtr, C;
 
@@ -1587,7 +1585,6 @@ Blt_GetGradient(Tcl_Interp *interp, Tk_Window tkwin, Gradient *gradPtr) {
     range[1] = (double)((rightPtr->green - leftPtr->green) / 257.0);
     range[2] = (double)((rightPtr->blue - leftPtr->blue) / 257.0);
 
-    y =0;
     width = gradPtr->width;
     if (gradPtr->grads) {
         Blt_FreeGradient(gradPtr);

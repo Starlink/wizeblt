@@ -1176,10 +1176,7 @@ Blt_TileRectangle(
     }
     if (clientPtr->tilePtr->mask != None) {
 	Pixmap mask;
-	int xm, ym;
 
-        xm = clientPtr->xOrigin;
-        ym = clientPtr->yOrigin;
         mask = RectangleMask(display, drawable, x, y, width, height,
 		tilePtr->mask, clientPtr->xOrigin, clientPtr->yOrigin);
 	XSetClipMask(display, tilePtr->gc, mask);

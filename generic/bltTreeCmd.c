@@ -1641,7 +1641,7 @@ ParseNode5(TreeCmd *cmdPtr, char **argv, RestoreData *dataPtr)
     if (parentId == -1) {	/* Dump marks root's parent as -1. */
 	node = dataPtr->root;
 	/* Create a mapping between the old id and the new node */
-	hPtr = Blt_CreateHashEntry(&dataPtr->idTable, (char *)nodeId, 
+	hPtr = Blt_CreateHashEntry(&dataPtr->idTable, (char *)(intptr_t)nodeId, 
 		   &isNew);
 	Blt_SetHashValue(hPtr, node);
 	Blt_TreeRelabelNode(cmdPtr->tree, node, names[0]);
@@ -1651,7 +1651,7 @@ ParseNode5(TreeCmd *cmdPtr, char **argv, RestoreData *dataPtr)
 	 * This can happen when there's a id collision with an
 	 * existing node. 
 	 */
-	hPtr = Blt_FindHashEntry(&dataPtr->idTable, (char *)parentId);
+	hPtr = Blt_FindHashEntry(&dataPtr->idTable, (char *)(intptr_t)parentId);
 	if (hPtr != NULL) {
 	    parent = Blt_GetHashValue(hPtr);
 	} else {
@@ -1688,7 +1688,7 @@ ParseNode5(TreeCmd *cmdPtr, char **argv, RestoreData *dataPtr)
 	if (dataPtr->flags & RESTORE_OVERWRITE &&
 	    ((node = Blt_TreeFindChild(parent, names[nNames - 1])))) {
 	    /* Create a mapping between the old id and the new node */
-	    hPtr = Blt_CreateHashEntry(&dataPtr->idTable, (char *)nodeId, 
+	    hPtr = Blt_CreateHashEntry(&dataPtr->idTable, (char *)(intptr_t)nodeId, 
 				       &isNew);
 	    Blt_SetHashValue(hPtr, node);
 	}
@@ -1698,7 +1698,7 @@ ParseNode5(TreeCmd *cmdPtr, char **argv, RestoreData *dataPtr)
 		node = Blt_TreeCreateNode(cmdPtr->tree, parent, 
 					  names[nNames - 1], -1);
 		/* Create a mapping between the old id and the new node */
-		hPtr = Blt_CreateHashEntry(&dataPtr->idTable, (char *)nodeId,
+		hPtr = Blt_CreateHashEntry(&dataPtr->idTable, (char *)(intptr_t)nodeId,
 					   &isNew);
 		Blt_SetHashValue(hPtr, node);
 	    } else {
@@ -2078,10 +2078,8 @@ static int
 SetValues(TreeCmd *cmdPtr, Blt_TreeNode node, int objc, Tcl_Obj *CONST *objv)
 {
     register int i;
-    int inode;
     char *string;
 
-    inode = node->inode;
     for (i = 0; i < objc; i += 2) {
 	string = Tcl_GetString(objv[i]);
 	if ((i + 1) == objc) {
@@ -2108,11 +2106,10 @@ UpdateValues(TreeCmd *cmdPtr, Blt_TreeNode node, int objc, Tcl_Obj *CONST *objv)
 {
     register int i;
     char *string;
-    int result = TCL_OK, inode;
+    int result = TCL_OK;
     Tcl_DString dStr;
     Tcl_Interp *interp = cmdPtr->interp;
 
-    inode = node->inode;
     if (objc % 2) {
         Tcl_AppendResult(interp, "odd # values", (char *)NULL);
         return TCL_ERROR;
@@ -2199,7 +2196,7 @@ ComparePatternList(Blt_List patternList, char *string, int nocase)
     for (node = Blt_ListFirstNode(patternList); node != NULL; 
 	node = Blt_ListNextNode(node)) {
 		
-	type = (int)Blt_ListGetValue(node);
+	type = (intptr_t)Blt_ListGetValue(node);
 	pattern = (char *)Blt_ListGetKey(node);
 	switch (type) {
 	case 0:
@@ -3657,7 +3654,7 @@ DeleteOp(
 	    for (hPtr = Blt_FirstHashEntry(tablePtr, &cursor); 
 		hPtr != NULL; hPtr = Blt_NextHashEntry(&cursor)) {
 		node = Blt_GetHashValue(hPtr);
-		Blt_ChainAppend(chainPtr, (ClientData)Blt_TreeNodeId(node));
+		Blt_ChainAppend(chainPtr, (ClientData)(intptr_t)Blt_TreeNodeId(node));
 	    }   
 	    /*  
 	     * Iterate through this list to delete the nodes.  By
@@ -3667,7 +3664,7 @@ DeleteOp(
 	    for (linkPtr = Blt_ChainFirstLink(chainPtr); linkPtr != NULL;
 		 linkPtr = nextPtr) {
 		nextPtr = Blt_ChainNextLink(linkPtr);
-		inode = (int)Blt_ChainGetValue(linkPtr);
+		inode = (intptr_t)Blt_ChainGetValue(linkPtr);
 		node = Blt_TreeGetNode(cmdPtr->tree, inode);
 		if (node != NULL) {
 		    DeleteNode(cmdPtr, node);
@@ -4552,7 +4549,7 @@ CreateOp(
     Blt_TreeNode parent = NULL, child = NULL;
     int cnt = 0, i, n, m, vobjc, tobjc, dobjc, pobjc, optInd, iPos = -1, incr = 0;
     int hasoffs = 0, seqlabel = 0, seqVal = 0, hasstart = 0, start;
-    int fixed = 0, hasnum = 0, hcnt = 0;
+    int fixed = 0, hcnt = 0;
     char *prefix = NULL, *string;
     Tcl_Obj **vobjv = NULL;
     Tcl_Obj **tobjv = NULL;
@@ -4628,7 +4625,6 @@ CreateOp(
             if (Tcl_GetIntFromObj(interp, objv[3], &cnt) != TCL_OK) {
                 return TCL_ERROR;
             }
-            hasnum = 1;
             hcnt++;
             if (cnt<0 || cnt>10000000) {
                 Tcl_AppendResult(interp, "count must be >= 0 and <= 10M", (char *)NULL);
@@ -4982,13 +4978,13 @@ KeysOp(
     Tcl_Obj *listObjPtr, *objPtr;
     register int i;
     int isNew, len;
-    char *string;
+    /*char *string;*/
     TagSearch tagIter = {0};
 
     Blt_InitHashTableWithPool(&keyTable, BLT_ONE_WORD_KEYS);
     listObjPtr = Tcl_NewListObj(0, (Tcl_Obj **) NULL);
     for (i = 2; i < objc; i++) {
-        string = Tcl_GetStringFromObj(objv[i],&len);
+        /*string =*/ Tcl_GetStringFromObj(objv[i],&len);
         if (len == 0) continue;
         if (FindTaggedNodes(interp, cmdPtr, objv[i], &tagIter) != TCL_OK) {
             Blt_DeleteHashTable(&keyTable);
@@ -6525,7 +6521,7 @@ updateOp(
     Blt_TreeNode node;
     char *string;
     Tcl_Obj *valuePtr;
-    int i, result = TCL_OK, inode;
+    int i, result = TCL_OK;
     Tcl_DString dStr;
 	
     if (GetNode(cmdPtr, objv[2], &node) != TCL_OK) {
@@ -6540,7 +6536,6 @@ updateOp(
         cmdPtr->updTyp = 0;
     }
     Tcl_DStringInit(&dStr);
-    inode = node->inode;
     for (i=3; i<objc; i+=2) {
         string = Tcl_GetString(objv[i]); 
         if (Blt_TreeGetValue(interp, cmdPtr->tree, node, string,
@@ -6599,11 +6594,11 @@ SetOp(
     Tcl_Obj *CONST *objv)
 {
     Blt_TreeNode node;
-    char *string;
+    /*char *string;*/
     int count = 0, len;
     TagSearch cursor = {0};
 	
-    string = Tcl_GetStringFromObj(objv[2],&len);
+    /*string =*/ Tcl_GetStringFromObj(objv[2],&len);
     if (len == 0) {
         Tcl_SetObjResult(interp, Tcl_NewIntObj(0));
         return TCL_OK;
@@ -6834,7 +6829,7 @@ ModifyOp(
     Tcl_Obj *CONST *objv)
 {
     Blt_TreeNode node;
-    char *string;
+    /*char *string;*/
     int count = 0, result = TCL_OK, len;
     Tcl_DString dStr;
     TagSearch cursor = {0};
@@ -6844,7 +6839,7 @@ ModifyOp(
         return TCL_ERROR;
     }
     if (objc<=3) return TCL_OK;
-    string = Tcl_GetStringFromObj(objv[2], &len);
+    /*string =*/ Tcl_GetStringFromObj(objv[2], &len);
     if (len == 0) {
         Tcl_SetObjResult(interp, Tcl_NewIntObj(0));
         return TCL_OK;
@@ -7169,7 +7164,6 @@ TagNodesOp(
     Blt_TreeNode node;
     Tcl_Obj *listObjPtr;
     Tcl_Obj *objPtr;
-    char *string;
     int isNew;
     register int i;
 	
@@ -7177,7 +7171,6 @@ TagNodesOp(
     for (i = 3; i < objc; i++) {
         TagSearch tcursor = {0};
         
-        string = Tcl_GetString(objv[i]);
         if (FindTaggedNodes(interp, cmdPtr, objv[i], &tcursor) != TCL_OK) {
             Tcl_ResetResult(interp);
             DoneTaggedNodes(&tcursor);
@@ -7733,7 +7726,7 @@ TypeOp(
 	return TCL_ERROR;
     }
     if (valueObjPtr->typePtr != NULL) {
-	Tcl_SetResult(interp, valueObjPtr->typePtr->name, TCL_VOLATILE);
+	Tcl_SetResult(interp, (char *)(valueObjPtr->typePtr->name), TCL_VOLATILE);
     } else {
 	Tcl_SetResult(interp, "string", TCL_STATIC);
     }
@@ -7756,12 +7749,9 @@ UnsetOp(
     Tcl_Obj *CONST *objv)
 {
     Blt_TreeNode node;
-    char *string;
     int count = 0;
     TagSearch cursor = {0};
 	
-    string = Tcl_GetString(objv[2]);
-
     if (FindTaggedNodes(interp, cmdPtr, objv[2], &cursor) != TCL_OK) {
         return TCL_ERROR;
     }
@@ -8084,9 +8074,9 @@ WithOp(
     Tcl_Obj *valuePtr, *varObj, *nullObj = NULL, *nodeObj = NULL;
     Tcl_Obj *hashObj = NULL, *starObj = NULL;
     Blt_TreeKeySearch keyIter;
-    int vobjc, kobjc, i, result = TCL_OK, len, cnt = 0, isar;
+    int vobjc, kobjc, i, result = TCL_OK, len, cnt = 0/*, isar */;
     int nobreak = 0, noupdate = 0, unset = 0, init = 0, aLen;
-    char *var, *string, *aName, *aPat = NULL;
+    char *var, *string, *aName = NULL, *aPat = NULL;
     int klen, kl, j;
     int *keySet = NULL;
     unsigned int inode;
@@ -8251,7 +8241,7 @@ WithOp(
             }
         }
         
-        isar = 0;
+        /* isar = 0; */
         if (arrName != NULL) {
             kl = strlen(aName);
                 
@@ -8526,7 +8516,7 @@ ForeachOp(
 {
     Blt_TreeNode node;
     int len, result;
-    char *var, *string;
+    char *var/*, *string*/;
     TagSearch cursor = {0};
 
     var = Tcl_GetString(objv[2]);
@@ -8535,7 +8525,7 @@ ForeachOp(
         Tcl_AppendResult(interp, "wrong number of args ", 0);
         return TCL_ERROR;
     }
-    string = Tcl_GetStringFromObj(objv[3],&len);
+    /*string =*/ Tcl_GetStringFromObj(objv[3],&len);
     if (len == 0) {
         Tcl_SetObjResult(interp, Tcl_NewIntObj(0));
         return TCL_OK;
@@ -8560,7 +8550,7 @@ ForeachOp(
         if (result == TCL_CONTINUE ) continue;
 	if (result == TCL_ERROR) {
             Tcl_AppendResult(interp,
-            "\n    (\"tree foreach\" body line ", Blt_Itoa(interp->errorLine), ")\n", 0);
+            "\n    (\"tree foreach\" body line ", Blt_Itoa(Tcl_GetErrorLine(interp)), ")\n", 0);
              break;
         }
         if (result != TCL_OK) {
@@ -8894,6 +8884,7 @@ static int SqlCallback(SqlData *sqlPtr, int argc, char **argv, char **azColName)
  * Obj Callback for sqlload.
  *
  */
+#if 0
 static int SqlCallbackObj(SqlData *sqlPtr, int argc, Tcl_Obj **objv, Tcl_Obj **azColName)
 {
     int i, j, rid, lid, n, tcid, vobjc, tobjc;
@@ -9121,6 +9112,7 @@ error:
     Tcl_DStringFree(&dStr);
     return 1;
 }
+#endif
 #endif
 
 #ifndef OMIT_SQLITE3_LOAD

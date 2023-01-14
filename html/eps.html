@@ -15,10 +15,10 @@ eps -  Encapsulated PostScript canvas item.
 create eps <I>x y </I></B></I>?<I>option value</I>?... 
 <H2><A NAME="sect2" HREF="#toc2">Description</A></H2>
 The <B>eps</B> canvas item lets you place
-encapulated PostScript (EPS) on a canvas, controlling its size and placement.
+encapsulated PostScript (EPS) on a canvas, controlling its size and placement.
  The EPS item is displayed either as a solid rectangle or a preview image.
  The preview image is designated in one of two ways: 1) the EPS file contains
-an ASCII hexidecimal preview, or 2) a Tk photo image.  When the canvas generates
+an ASCII hexadecimal preview, or 2) a Tk photo image.  When the canvas generates
 PostScript output, the EPS will be inserted with the proper translation
 and scaling to match that of the EPS item. So can use the canvas widget
 as a page layout tool. 
@@ -39,7 +39,7 @@ file when the canvas is printed. <P>
 <CODE><I>canvas <B>create eps <I>x y </I></B></I>?<I>option value</I>?...<BR>
 </CODE><P>The <B>eps</B> item creates a new canvas item. <I>Canvas</I> is the name of a <B>canvas</B> widget.
  You must supply the X-Y coordinate of the new eps item.  How the coordinate
-is exactly interpretered is  controlled by the <B>-anchor</B> option (see below).
+is exactly interpreted is controlled by the <B>-anchor</B> option (see below).
 <P>
 Additional options may be specified on the command line to configure aspects
 of the eps item such as its color, stipple, and font.  The following <I>option</I>

@@ -1658,12 +1658,13 @@ ClosestOp(graphPtr, interp, argc, argv)
     Graph *graphPtr;		/* Graph widget */
     Tcl_Interp *interp;		/* Interpreter to report results to */
     int argc;			/* Number of element names */
-    char **argv;		/* List of element names */
+    CONST char **argv;		/* List of element names */
 {
     Element *elemPtr;
     ClosestSearch search;
     int i, x, y;
     int flags = TCL_LEAVE_ERR_MSG;
+    int found;
 
     if (graphPtr->flags & RESET_AXES) {
 	Blt_ResetAxes(graphPtr);
@@ -1698,7 +1699,7 @@ ClosestOp(graphPtr, interp, argc, argv)
     search.x = x;
     search.y = y;
 
-    if (Tk_ConfigureWidget(interp, graphPtr->tkwin, closestSpecs, i - 6,
+    if (Blt_ConfigureWidget(interp, graphPtr->tkwin, closestSpecs, i - 6,
 	    argv + 6, (char *)&search, TK_CONFIG_ARGV_ONLY) != TCL_OK) {
 	return TCL_ERROR;	/* Error occurred processing an option. */
     }
@@ -1708,12 +1709,21 @@ ClosestOp(graphPtr, interp, argc, argv)
     search.dist = (double)(search.halo + 1);
 
     if (i < argc) {
+	Blt_ChainLink *linkPtr;
 
 	for ( /* empty */ ; i < argc; i++) {
 	    if (NameToElement(graphPtr, argv[i], &elemPtr) != TCL_OK) {
 		return TCL_ERROR;	/* Can't find named element */
 	    }
- 	    if (elemPtr->hidden) {
+	    found = FALSE;
+	    for (linkPtr = Blt_ChainFirstLink(graphPtr->elements.displayList);
+		 linkPtr == NULL; linkPtr = Blt_ChainNextLink(linkPtr)) {
+		if (elemPtr == Blt_ChainGetValue(linkPtr)) {
+		    found = TRUE;
+		    break;
+		}
+	    }
+	    if ((!found) || (elemPtr->hidden)) {
  		Tcl_AppendResult(interp, "element \"", argv[i],
  			"\" is hidden", (char *)NULL);
   		return TCL_ERROR;	/* Element isn't visible */
@@ -1811,12 +1821,12 @@ ConfigureOp(graphPtr, interp, argc, argv)
     Graph *graphPtr;
     Tcl_Interp *interp;
     int argc;
-    char *argv[];
+    CONST char *argv[];
 {
     Element *elemPtr;
     int flags;
     int numNames, numOpts;
-    char **options;
+    CONST char **options;
     register int i;
 
     /* Figure out where the option value pairs begin */
@@ -1844,7 +1854,7 @@ ConfigureOp(graphPtr, interp, argc, argv)
 	    return Tk_ConfigureInfo(interp, graphPtr->tkwin, 
 		elemPtr->specsPtr, (char *)elemPtr, options[0], flags);
 	}
-	if (Tk_ConfigureWidget(interp, graphPtr->tkwin, elemPtr->specsPtr, 
+	if (Blt_ConfigureWidget(interp, graphPtr->tkwin, elemPtr->specsPtr, 
 		numOpts, options, (char *)elemPtr, flags) != TCL_OK) {
 	    return TCL_ERROR;
 	}

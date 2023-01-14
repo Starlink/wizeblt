@@ -27,6 +27,8 @@
 
 #include "bltInt.h"
 #include "bltList.h"
+#include "bltNsUtil.h"
+#include "tclInt.h"
 
 /* Namespace related routines */
 
@@ -62,7 +64,7 @@ Blt_GetVariableNamespace(interp, name)
     Tcl_Var varPtr;
     Tcl_Namespace *nsPtr;
     Tcl_Obj *objPtr;
-    char *str, *cp;
+    CONST char *str, *cp;
 
     varPtr = Tcl_FindNamespaceVar(interp, (char *)name, 
 	(Tcl_Namespace *)NULL, 0);
@@ -72,7 +74,7 @@ Blt_GetVariableNamespace(interp, name)
     objPtr = Tcl_NewObj();
     Tcl_GetVariableFullName(interp, varPtr, objPtr);
     str = Tcl_GetString(objPtr);
-    if (Blt_ParseQualifiedName(interp, str, &nsPtr, &cp) == NULL) {
+    if (Blt_ParseQualifiedName(interp, str, &nsPtr, &cp) != TCL_OK) {
         nsPtr = NULL;
     }
     Tcl_DecrRefCount(objPtr);

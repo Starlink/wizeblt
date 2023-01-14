@@ -1088,7 +1088,7 @@ static void SelectCmdProc _ANSI_ARGS_((ClientData clientData));
 static void EventuallyInvokeSelectCmd _ANSI_ARGS_((Hierbox *hboxPtr));
 static int ComputeVisibleEntries _ANSI_ARGS_((Hierbox *hboxPtr));
 static int ConfigureEntry _ANSI_ARGS_((Hierbox *hboxPtr, Entry * entryPtr,
-	int argc, char **argv, int flags));
+	int argc, CONST char **argv, int flags));
 static void ComputeLayout _ANSI_ARGS_((Hierbox *hboxPtr));
 
 static CompareProc ExactCompare, GlobCompare, RegexpCompare;
@@ -2064,7 +2064,7 @@ CreateNode(hboxPtr, parentPtr, position, name)
     }
     entryPtr->labelText = Blt_Strdup(name);
 
-    if (ConfigureEntry(hboxPtr, entryPtr, 0, (char **)NULL, 0) != TCL_OK) {
+    if (ConfigureEntry(hboxPtr, entryPtr, 0, (CONST char **)NULL, 0) != TCL_OK) {
 	DestroyEntry(entryPtr);
 	return NULL;
     }
@@ -2077,7 +2077,7 @@ CreateNode(hboxPtr, parentPtr, position, name)
     /* Generate a unique node serial number. */
     do {
 	serial = hboxPtr->nextSerial++;
-	hPtr = Blt_CreateHashEntry(&(hboxPtr->nodeTable), (char *)serial,
+	hPtr = Blt_CreateHashEntry(&(hboxPtr->nodeTable), (char *)(intptr_t)serial,
 	    &isNew);
     } while (!isNew);
     Blt_SetHashValue(hPtr, treePtr);
@@ -2372,7 +2372,7 @@ GetNodeByIndex(hboxPtr, string)
 	if (Tcl_GetInt(NULL, string, &serial) == TCL_OK) {
 	    Blt_HashEntry *hPtr;
 
-	    hPtr = Blt_FindHashEntry(&(hboxPtr->nodeTable), (char *)serial);
+	    hPtr = Blt_FindHashEntry(&(hboxPtr->nodeTable), (char *)(intptr_t)serial);
 	    if (hPtr != NULL) {
 		return (Tree *) Blt_GetHashValue(hPtr);
 	    }
@@ -2406,7 +2406,7 @@ NodeToString(hboxPtr, nodePtr)
     int serial;
 
     /* Node table keys are integers.  Convert them to strings. */
-    serial = (int)Blt_GetHashKey(&(hboxPtr->nodeTable),
+    serial = (intptr_t)Blt_GetHashKey(&(hboxPtr->nodeTable),
 	nodePtr->entryPtr->hashPtr);
     sprintf(string, "%d", serial);
 
@@ -3309,7 +3309,7 @@ ConfigureEntry(hboxPtr, entryPtr, argc, argv, flags)
     Hierbox *hboxPtr;
     Entry *entryPtr;
     int argc;
-    char **argv;
+    CONST char **argv;
     int flags;
 {
     GC newGC;
@@ -3321,7 +3321,7 @@ ConfigureEntry(hboxPtr, entryPtr, argc, argv, flags)
     XColor *colorPtr;
 
     hierBox = hboxPtr;
-    if (Tk_ConfigureWidget(hboxPtr->interp, hboxPtr->tkwin, entryConfigSpecs,
+    if (Blt_ConfigureWidget(hboxPtr->interp, hboxPtr->tkwin, entryConfigSpecs,
 	    argc, argv, (char *)entryPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -3926,7 +3926,7 @@ ConfigureHierbox(interp, hboxPtr, argc, argv, flags)
     Hierbox *hboxPtr;		/* Information about widget; may or may not
 			         * already have values for some fields. */
     int argc;
-    char **argv;
+    CONST char **argv;
     int flags;
 {
     XGCValues gcValues;
@@ -3935,7 +3935,7 @@ ConfigureHierbox(interp, hboxPtr, argc, argv, flags)
     Tk_Uid nameId;
     Pixmap bitmap;
     hierBox = hboxPtr;
-    if (Tk_ConfigureWidget(interp, hboxPtr->tkwin, configSpecs, argc, argv,
+    if (Blt_ConfigureWidget(interp, hboxPtr->tkwin, configSpecs, argc, argv,
 	    (char *)hboxPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -4443,7 +4443,7 @@ DrawVerticals(hboxPtr, treePtr, drawable)
     Drawable drawable;		/* Pixmap or window to draw into. */
 {
     Entry *entryPtr;		/* Entry to be drawn. */
-    int x1, y1, x2, y2;
+    int x1, y1i, x2, y2;
     int height;
     int x, y;
 
@@ -4463,22 +4463,22 @@ DrawVerticals(hboxPtr, treePtr, drawable)
 	y += (height - hboxPtr->button.height) / 2;
 	x1 = x2 = x + LEVELWIDTH(treePtr->level) +
 	    LEVELWIDTH(treePtr->level + 1) / 2;
-	y1 = y + hboxPtr->button.height / 2;
-	y2 = y1 + entryPtr->lineHeight;
+	y1i = y + hboxPtr->button.height / 2;
+	y2 = y1i + entryPtr->lineHeight;
 	if ((treePtr == hboxPtr->rootPtr) && (hboxPtr->hideRoot)) {
-	    y1 += entryPtr->height;
+	    y1i += entryPtr->height;
 	}
 	/*
 	 * Clip the line's Y-coordinates at the window border.
 	 */
-	if (y1 < 0) {
-	    y1 = 0;
+	if (y1i < 0) {
+	    y1i = 0;
 	}
 	if (y2 > Tk_Height(hboxPtr->tkwin)) {
 	    y2 = Tk_Height(hboxPtr->tkwin);
 	}
-	if ((y1 < Tk_Height(hboxPtr->tkwin)) && (y2 > 0)) {
-	    XDrawLine(hboxPtr->display, drawable, hboxPtr->lineGC, x1, y1, 
+	if ((y1i < Tk_Height(hboxPtr->tkwin)) && (y2 > 0)) {
+	    XDrawLine(hboxPtr->display, drawable, hboxPtr->lineGC, x1, y1i, 
 		      x2, y2);
 	}
     }
@@ -4788,17 +4788,17 @@ DrawLabel(hboxPtr, treePtr, x, y, drawable)
 	    x, y);
     }
     if ((isFocused) && (hboxPtr->focusEdit) && (editPtr->cursorOn)) {
-	int x1, y1, x2, y2;
+	int x1, y1i, x2, y2;
 
 	GetCursorLocation(hboxPtr, treePtr);
 	x1 = x + editPtr->x;
 	x2 = x1 + 3;
-	y1 = y + editPtr->y - 1;
-	y2 = y1 + editPtr->height - 1;
+	y1i = y + editPtr->y - 1;
+	y2 = y1i + editPtr->height - 1;
 	XDrawLine(hboxPtr->display, drawable, entryPtr->labelGC,
-	    x1, y1, x1, y2);
+	    x1, y1i, x1, y2);
 	XDrawLine(hboxPtr->display, drawable, entryPtr->labelGC,
-	    x1 - 2, y1, x2, y1);
+	    x1 - 2, y1i, x2, y1i);
 	XDrawLine(hboxPtr->display, drawable, entryPtr->labelGC,
 	    x1 - 2, y2, x2, y2);
     }
@@ -4859,7 +4859,7 @@ DrawEntry(hboxPtr, treePtr, drawable)
     int width, height;
     int entryHeight;
     int buttonY;
-    int x1, y1, x2, y2;
+    int x1, y1i, x2, y2;
     Entry *entryPtr;
 
     entryPtr = treePtr->entryPtr;
@@ -4875,7 +4875,7 @@ DrawEntry(hboxPtr, treePtr, drawable)
     buttonY = y + entryPtr->buttonY;
 
     x1 = x + (width / 2);
-    y1 = y2 = buttonY + (buttonPtr->height / 2);
+    y1i = y2 = buttonY + (buttonPtr->height / 2);
     x2 = x1 + (LEVELWIDTH(treePtr->level) + LEVELWIDTH(treePtr->level + 1)) / 2;
 
     if ((treePtr->parentPtr != NULL) && (hboxPtr->lineWidth > 0)) {
@@ -4883,17 +4883,17 @@ DrawEntry(hboxPtr, treePtr, drawable)
 	 * For every node except root, draw a horizontal line from
 	 * the vertical bar to the middle of the icon.
 	 */
-	XDrawLine(hboxPtr->display, drawable, hboxPtr->lineGC, x1, y1, x2, y2);
+	XDrawLine(hboxPtr->display, drawable, hboxPtr->lineGC, x1, y1i, x2, y2);
     }
     if ((entryPtr->flags & ENTRY_OPEN) && (hboxPtr->lineWidth > 0)) {
 	/*
 	 * Entry is open, draw vertical line.
 	 */
-	y2 = y1 + entryPtr->lineHeight;
+	y2 = y1i + entryPtr->lineHeight;
 	if (y2 > Tk_Height(hboxPtr->tkwin)) {
 	    y2 = Tk_Height(hboxPtr->tkwin);	/* Clip line at window border. */
 	}
-	XDrawLine(hboxPtr->display, drawable, hboxPtr->lineGC, x2, y1, x2, y2);
+	XDrawLine(hboxPtr->display, drawable, hboxPtr->lineGC, x2, y1i, x2, y2);
     }
     if ((entryPtr->flags & ENTRY_BUTTON) && (treePtr->parentPtr != NULL)) {
 	/*
@@ -5493,7 +5493,7 @@ ButtonConfigureOp(hboxPtr, interp, argc, argv)
     Hierbox *hboxPtr;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     /* Figure out where the option value pairs begin */
     argc -= 3;
@@ -5506,7 +5506,7 @@ ButtonConfigureOp(hboxPtr, interp, argc, argv)
 	return Tk_ConfigureInfo(interp, hboxPtr->tkwin, buttonConfigSpecs,
 	    (char *)hboxPtr, argv[0], 0);
     }
-    if (Tk_ConfigureWidget(hboxPtr->interp, hboxPtr->tkwin, buttonConfigSpecs,
+    if (Blt_ConfigureWidget(hboxPtr->interp, hboxPtr->tkwin, buttonConfigSpecs,
 	    argc, argv, (char *)hboxPtr, TK_CONFIG_ARGV_ONLY) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -5829,7 +5829,7 @@ ConfigureOpOp(hboxPtr, interp, argc, argv)
     char **argv;
 {
     int nIds, nOpts;
-    char **options;
+    CONST char **options;
     register int i;
     Tree *treePtr;
 
@@ -5847,7 +5847,7 @@ ConfigureOpOp(hboxPtr, interp, argc, argv)
     }
     nIds = i;			/* Number of element names specified */
     nOpts = argc - i;		/* Number of options specified */
-    options = argv + i;		/* Start of options in argv  */
+    options = (CONST char **)argv + i;		/* Start of options in argv  */
 
     for (i = 0; i < nIds; i++) {
 	StringToNode(hboxPtr, argv[i], &treePtr);
@@ -7204,7 +7204,7 @@ InsertOp(hboxPtr, interp, argc, argv)
     Tcl_DString dString;
     register int i, l;
     int nOpts;
-    char **options;
+    CONST char **options;
     char **nameArr;
 
     rootPtr = hboxPtr->rootPtr;
@@ -7230,7 +7230,7 @@ InsertOp(hboxPtr, interp, argc, argv)
 	}
     }
     nOpts = argc - count;
-    options = argv + count;
+    options = (CONST char **)argv + count;
 
     Tcl_DStringInit(&dString);
     for (i = 0; i < count; i++) {

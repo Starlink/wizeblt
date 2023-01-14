@@ -47,9 +47,9 @@ install-all:
 	(cd library; $(MAKE) install)
 	(cd man; $(MAKE) install)
 	(cd demos; $(MAKE) install)
-	$(INSTALL_DATA) $(srcdir)/README $(INSTALL_DIR)$(scriptdir)
-	$(INSTALL_DATA) $(srcdir)/PROBLEMS $(INSTALL_DIR)$(scriptdir)
-	$(INSTALL_DATA) $(srcdir)/NEWS $(INSTALL_DIR)$(scriptdir)
+	$(INSTALL_DATA) $(srcdir)/README $(INSTALL_ROOT)$(scriptdir)
+	$(INSTALL_DATA) $(srcdir)/PROBLEMS $(INSTALL_ROOT)$(scriptdir)
+	$(INSTALL_DATA) $(srcdir)/NEWS $(INSTALL_ROOT)$(scriptdir)
 
 mkdirs:
 	@for i in $(instdirs) ; do \
@@ -57,7 +57,7 @@ mkdirs:
 	    : ; \
 	  else \
             echo " mkdir $(INSTALL_ROOT)$$i" ; \
-            mkdir $(INSTALL_ROOT)$$i ; \
+            mkdir -p $(INSTALL_ROOT)$$i ; \
           fi ; \
         done
 
@@ -66,10 +66,14 @@ clean:
 	(cd library; $(MAKE) clean)
 	(cd man; $(MAKE) clean)
 	(cd demos; $(MAKE) clean)
-	$(RM) *.bak *\~ "#"* *pure* .pure*
+	$(RM) *.bak *\~ "#"* .pure*
 
 GENERATED_FILES = \
 	config.status config.cache config.log Makefile 
 
 distclean: clean
+	(cd generic; $(MAKE) distclean)
+	(cd library; $(MAKE) distclean)
+	(cd man; $(MAKE) distclean)
+	(cd demos; $(MAKE) distclean)
 	$(RM) $(GENERATED_FILES)

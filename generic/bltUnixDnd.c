@@ -620,7 +620,7 @@ static Dnd *CreateDnd _ANSI_ARGS_((Tcl_Interp *interp, Tk_Window tkwin));
 static void DestroyDnd _ANSI_ARGS_((DestroyData data));
 static int DndEventProc _ANSI_ARGS_((ClientData clientData, XEvent *eventPtr));
 static int ConfigureToken _ANSI_ARGS_((Tcl_Interp *interp, Dnd *dndPtr,
-	int argc, char **argv, int flags));
+	int argc, CONST char **argv, int flags));
 
 static Winfo *OverTarget _ANSI_ARGS_((Dnd *dndPtr));
 static void AddTargetProperty _ANSI_ARGS_((Dnd *dndPtr));
@@ -1459,6 +1459,7 @@ HideToken(dndPtr)
  *
  * ------------------------------------------------------------------------
  */
+#if 0
 static void
 MorphToken(dndPtr)
     Dnd *dndPtr;		/* Drag-and-drop manager (source). */
@@ -1511,6 +1512,7 @@ MorphToken(dndPtr)
     }
     RaiseToken(dndPtr);
 }
+#endif
 
 static void
 GetTokenPosition(dndPtr, x, y)
@@ -1825,7 +1827,7 @@ ConfigureToken(interp, dndPtr, argc, argv, flags)
     Tcl_Interp *interp;		/* current interpreter */
     Dnd *dndPtr;		/* Drag&drop source widget record */
     int argc;			/* number of arguments */
-    char **argv;		/* argument strings */
+    CONST char **argv;		/* argument strings */
     int flags;			/* flags controlling interpretation */
 {
     GC newGC;
@@ -1834,7 +1836,7 @@ ConfigureToken(interp, dndPtr, argc, argv, flags)
     unsigned long gcMask;
 
     Tk_MakeWindowExist(tokenPtr->tkwin);
-    if (Tk_ConfigureWidget(interp, tokenPtr->tkwin, tokenConfigSpecs, argc, 
+    if (Blt_ConfigureWidget(interp, tokenPtr->tkwin, tokenConfigSpecs, argc, 
 		argv, (char *)tokenPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -3761,12 +3763,12 @@ ConfigureOp(clientData, interp, argc, argv)
     ClientData clientData;	/* Thread-specific data. */
     Tcl_Interp *interp;		/* current interpreter */
     int argc;			/* number of arguments */
-    char **argv;		/* argument strings */
+    CONST char **argv;		/* argument strings */
 {
     Dnd *dndPtr;
     int flags;
 
-    if (GetDnd(clientData, interp, argv[2], &dndPtr) != TCL_OK) {
+    if (GetDnd(clientData, interp, (char *)argv[2], &dndPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     flags = TK_CONFIG_ARGV_ONLY;
@@ -3777,7 +3779,7 @@ ConfigureOp(clientData, interp, argc, argv)
 	return Tk_ConfigureInfo(interp, dndPtr->tkwin, configSpecs,
 	    (char *)dndPtr, argv[3], flags);
     } 
-    if (Tk_ConfigureWidget(interp, dndPtr->tkwin, configSpecs, argc - 3,
+    if (Blt_ConfigureWidget(interp, dndPtr->tkwin, configSpecs, argc - 3,
 		   argv + 3, (char *)dndPtr, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -4418,7 +4420,7 @@ RegisterOp(clientData, interp, argc, argv)
     ClientData clientData;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     DndInterpData *dataPtr = clientData;
     Tk_Window tkwin;
@@ -4440,7 +4442,7 @@ RegisterOp(clientData, interp, argc, argv)
     dndPtr->hashPtr = hPtr;
     dndPtr->dataPtr = dataPtr;
     Blt_SetHashValue(hPtr, dndPtr);
-    if (Tk_ConfigureWidget(interp, dndPtr->tkwin, configSpecs, argc - 3,
+    if (Blt_ConfigureWidget(interp, dndPtr->tkwin, configSpecs, argc - 3,
 	   argv + 3, (char *)dndPtr, 0) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -4462,12 +4464,12 @@ TokenWindowOp(clientData, interp, argc, argv)
     ClientData clientData;	/* Thread-specific data. */
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     Dnd *dndPtr;
     int flags;
 
-    if (GetDnd(clientData, interp, argv[3], &dndPtr) != TCL_OK) {
+    if (GetDnd(clientData, interp, (char *)argv[3], &dndPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     flags = 0;
@@ -4529,13 +4531,13 @@ TokenConfigureOp(clientData, interp, argc, argv)
     ClientData clientData;	/* Thread-specific data. */
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     Token *tokenPtr;
     Dnd *dndPtr;
     int flags;
 
-    if (GetDnd(clientData, interp, argv[3], &dndPtr) != TCL_OK) {
+    if (GetDnd(clientData, interp, (char *)argv[3], &dndPtr) != TCL_OK) {
 	return TCL_ERROR;
     }
     flags = TK_CONFIG_ARGV_ONLY;

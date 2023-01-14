@@ -55,7 +55,7 @@ SetArrayFromAny(interp, objPtr)
     Blt_HashEntry *hPtr;
     Blt_HashTable *tablePtr;
     Tcl_Obj *elemObjPtr, **vobjv;
-    Tcl_ObjType *oldTypePtr;
+    CONST Tcl_ObjType *oldTypePtr;
     char *string;
     int isNew;
     int nElem;
@@ -69,6 +69,7 @@ SetArrayFromAny(interp, objPtr)
     }
     if (nElem%2) {
         if (interp != NULL) {
+	    string = Tcl_GetString(objPtr);
             Tcl_AppendResult(interp, "odd length: ", string, 0);
         }
         return TCL_ERROR;

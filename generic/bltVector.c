@@ -370,7 +370,7 @@ Blt_VectorGetIndex(interp, vPtr, string, indexPtr, flags, procPtrPtr)
     *indexPtr = (int)value;
 cleanup:
     if (string != zStatic) {
-        Blt_Free( string );
+        Blt_Free( (void *)string );
     }
     return result;
 }
@@ -1896,7 +1896,7 @@ Tcl_Obj *CONST *objv;
         return TCL_OK;
     }
     for (i=2; i<objc; i+=2) {
-        int option, *ovar;
+        int option, *ovar = NULL;
         if (Tcl_GetIndexFromObj(interp, objv[i], optionArr, "option",
             0, &option) != TCL_OK) {
                 return TCL_OK;

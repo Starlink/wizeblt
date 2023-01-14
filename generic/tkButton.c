@@ -352,11 +352,9 @@ StringToName( ClientData clientData, Tcl_Interp *interp, Tk_Window parent,
     char *string, char *widgRec, int offset, char *strList[], char *label )
 {
     int *namePtr = (int *)(widgRec + offset);
-    char c;
     int i;
     
     for (i=0; strList[i]; i++) {
-        c = string[0];
         if (strcmp(string, strList[i]) == 0) {
             *namePtr = i;
             return TCL_OK;
@@ -855,7 +853,7 @@ static int ButtonWidgetCmd _ANSI_ARGS_((ClientData clientData,
 	Tcl_Interp *interp, int argc, char **argv));
 static void ComputeButtonGeometry _ANSI_ARGS_((Button *butPtr));
 static int ConfigureButton _ANSI_ARGS_((Tcl_Interp *interp,
-	Button *butPtr, int argc, char **argv,
+	Button *butPtr, int argc, CONST char **argv,
 	int flags));
 static void DestroyButton _ANSI_ARGS_((Button *butPtr));
 static void DisplayButton _ANSI_ARGS_((ClientData clientData));
@@ -863,8 +861,6 @@ static int InvokeButton _ANSI_ARGS_((Button *butPtr));
 
 static Blt_TileChangedProc TileChangedProc;
 static Tcl_CmdProc ButtonCmd, LabelCmd, CheckbuttonCmd, RadiobuttonCmd;
-
-EXTERN int TkCopyAndGlobalEval _ANSI_ARGS_((Tcl_Interp *interp, char *script));
 
 #if (TK_MAJOR_VERSION > 4)
 EXTERN void TkComputeAnchor _ANSI_ARGS_((Tk_Anchor anchor, Tk_Window tkwin, 
@@ -900,11 +896,10 @@ StringToIcons( ClientData clientData, Tcl_Interp *interp, Tk_Window parent,
 {
     Button *butPtr = (Button*)widgRec;;
     int argc = 0;
-    int result,  i;
+    int i;
     char **argv;
     Tk_Image imgs[9], image;
 
-    result = TCL_OK;
     if (string && Tcl_SplitList(interp, string, &argc, &argv) != TCL_OK) {
         return TCL_ERROR;
     }
@@ -1307,7 +1302,7 @@ ButtonCreate(clientData, interp, argc, argv, type)
     Tk_CreateEventHandler(butPtr->tkwin,
 	ExposureMask | StructureNotifyMask | FocusChangeMask,
 	ButtonEventProc, butPtr);
-    if (ConfigureButton(interp, butPtr, argc - 2, argv + 2,
+    if (ConfigureButton(interp, butPtr, argc - 2, (CONST char **)argv + 2,
 	    configFlags[type]) != TCL_OK) {
 	Tk_DestroyWindow(butPtr->tkwin);
 	return TCL_ERROR;
@@ -1339,7 +1334,7 @@ static char *ButtonGetValue(Button *butPtr) {
                 value = Tcl_GetString(valuePtr);
         }
     }
-    return value;
+    return (char *)value;
 }
 
 static int ButtonSetValue(Button *butPtr, char *value, int warn) {
@@ -1429,7 +1424,7 @@ ButtonWidgetCmd(clientData, interp, argc, argv)
 		(char *)butPtr, argv[2],
 		configFlags[butPtr->type]);
 	} else {
-	    result = ConfigureButton(interp, butPtr, argc - 2, argv + 2,
+	    result = ConfigureButton(interp, butPtr, argc - 2, (CONST char **)argv + 2,
 		configFlags[butPtr->type] | TK_CONFIG_ARGV_ONLY);
 	}
     } else if ((c == 'd') && (strncmp(argv[1], "deselect", length) == 0)
@@ -1696,16 +1691,16 @@ ConfigureButton(interp, butPtr, argc, argv, flags)
     register Button *butPtr;	/* Information about widget;  may or may
 				 * not already have values for some fields. */
     int argc;			/* Number of valid entries in argv. */
-    char **argv;		/* Arguments. */
+    CONST char **argv;		/* Arguments. */
     int flags;			/* Flags to pass to Tk_ConfigureWidget. */
 {
     XGCValues gcValues;
     GC newGC;
     unsigned long mask;
     Tk_Image image;
-    char *oldTextVar, *oldSelVar;
+    char *oldTextVar = NULL, *oldSelVar = NULL;
     Blt_Tree oldTree;
-    int oldNode, result = TCL_OK;
+    int result = TCL_OK;
     char * oldABdStr = butPtr->activeBdImageString;
     char * oldDBStr = butPtr->disabledBdImageString;
     char * oldBDStr = butPtr->bdImageString;
@@ -1714,17 +1709,16 @@ ConfigureButton(interp, butPtr, argc, argv, flags)
 
     winPtr = (Tk_FakeWin *) (butPtr->tkwin);
     oldTree = butPtr->tree;
-    oldNode = butPtr->node;
     
     if (oldTree == NULL) {
         oldTextVar = (butPtr->textVarName?strdup(butPtr->textVarName):NULL);
         oldSelVar = (butPtr->selVarName?strdup(butPtr->selVarName):NULL);
     }
     
-    if (Tk_ConfigureWidget(interp, butPtr->tkwin, configSpecs,
+    if (Blt_ConfigureWidget(interp, butPtr->tkwin, configSpecs,
 	    argc, argv, (char *)butPtr, flags) != TCL_OK) {
-        if (oldTextVar) ckfree(oldTextVar);
-        if (oldTextVar) ckfree(oldSelVar);
+        if (oldTextVar != NULL) ckfree(oldTextVar);
+        if (oldSelVar != NULL) ckfree(oldSelVar);
 	return TCL_ERROR;
     }
     /*
@@ -2221,7 +2215,7 @@ DisplayButton(clientData)
 				 * the text to make the button appear to
 				 * move up and down as the relief changes. */
     Blt_Tile tile, bgTile, inTile;
-    int borderWidth, drawBorder;
+    int drawBorder;
     int textXOffset, textYOffset;
     int haveImage = 0, haveText = 0;
     int imageWidth, imageHeight;
@@ -2307,7 +2301,6 @@ DisplayButton(clientData)
         bgTile = TILECHOOSE(bgTile,butPtr->innerTile);
     }
     border = butPtr->normalBorder;
-    borderWidth = butPtr->borderWidth;
 
     gc = butPtr->normalTextGC;
         
@@ -3292,7 +3285,12 @@ InvokeButton(butPtr)
 	}
     }
     if ((butPtr->type > TYPE_LABEL) && (butPtr->command != NULL)) {
-	return TkCopyAndGlobalEval(butPtr->interp, butPtr->command);
+	Tcl_DString buf;
+	Tcl_DStringInit(&buf);
+	Tcl_DStringAppend(&buf, butPtr->command, -1);
+	int code = Tcl_EvalEx(butPtr->interp, Tcl_DStringValue(&buf), Tcl_DStringLength(&buf), TCL_EVAL_GLOBAL);
+	Tcl_DStringFree(&buf);
+	return code;
     }
     return TCL_OK;
 }

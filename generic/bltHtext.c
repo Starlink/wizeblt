@@ -40,6 +40,13 @@
  *    of the virtual text.
  */
 
+/*
+ * the htext widget is broken in tk8.5.6 as
+ * Tk_ConfigureWidget no longer supports
+ * queries of changed options. Need to migrate to Tk_SetOptions
+ * instead hack a wrapper Blt_ConfigureWidget
+ */
+
 #include "bltInt.h"
 
 #ifndef NO_HTEXT
@@ -338,7 +345,7 @@ static Tk_ConfigSpec configSpecs[] =
 	TK_CONFIG_DONT_SET_DEFAULT, &heightOption},
     {TK_CONFIG_CUSTOM, "-linespacing", "lineSpacing", "LineSpacing",
 	DEF_HTEXT_LINE_SPACING, Tk_Offset(HText, leader),
-	TK_CONFIG_DONT_SET_DEFAULT, &bltDistanceOption},
+ 	TK_CONFIG_DONT_SET_DEFAULT, &bltDistanceOption},
     {TK_CONFIG_CUSTOM, "-maxheight", "maxHeight", "MaxHeight",
 	DEF_HTEXT_MAX_HEIGHT, Tk_Offset(HText, maxHeight),
 	TK_CONFIG_DONT_SET_DEFAULT, &bltDistanceOption},
@@ -2841,9 +2848,15 @@ DrawSegment(htPtr, draw, linePtr, x, y, segPtr)
     Tk_GetFontMetrics(htPtr->font, &fontMetrics);
     if ((segPtr->textEnd < htPtr->selFirst) ||
 	(segPtr->textStart > htPtr->selLast)) {	/* No selected text */
+#ifdef TK_DRAWCHARS_ANLGE
+	Tk_DrawChars(htPtr->display, draw, htPtr->drawGC, htPtr->font,
+	    htPtr->charArr + segPtr->textStart, textLength - 1,
+		     x, y + linePtr->baseline, 0.);
+#else
 	Tk_DrawChars(htPtr->display, draw, htPtr->drawGC, htPtr->font,
 	    htPtr->charArr + segPtr->textStart, textLength - 1,
 	    x, y + linePtr->baseline);
+#endif
 	return;
     }
     /*
@@ -2872,9 +2885,15 @@ DrawSegment(htPtr, draw, linePtr, x, y, segPtr)
 	Tk_MeasureChars(htPtr->font, htPtr->charArr + segPtr->textStart,
 	    nChars, 10000, DEF_TEXT_FLAGS, &lastX);
 	lastX += x;
+#ifdef TK_DRAWCHARS_ANGLE
+	Tk_DrawChars(htPtr->display, draw, htPtr->drawGC, htPtr->font,
+	    htPtr->charArr + segPtr->textStart, nChars, x,
+		     y + linePtr->baseline, 0.);
+#else
 	Tk_DrawChars(htPtr->display, draw, htPtr->drawGC, htPtr->font,
 	    htPtr->charArr + segPtr->textStart, nChars, x,
 	    y + linePtr->baseline);
+#endif
 	curPos = selStart;
     }
     if (selLength > 0) {	/* The selection itself */
@@ -2890,16 +2909,28 @@ DrawSegment(htPtr, draw, linePtr, x, y, segPtr)
 	    lastX, y + linePtr->baseline - fontMetrics.ascent,
 	    width, fontMetrics.linespace, htPtr->selBorderWidth,
 	    TK_RELIEF_RAISED);
+#ifdef TK_DRAWCHARS_ANGLE
+	Tk_DrawChars(htPtr->display, draw, htPtr->selectGC,
+	    htPtr->font, htPtr->charArr + selStart, selLength,
+		     lastX, y + linePtr->baseline, 0.);
+#else
 	Tk_DrawChars(htPtr->display, draw, htPtr->selectGC,
 	    htPtr->font, htPtr->charArr + selStart, selLength,
 	    lastX, y + linePtr->baseline);
+#endif
 	lastX = nextX;
 	curPos = selStart + selLength;
     }
     nChars = segPtr->textEnd - curPos;
     if (nChars > 0) {		/* Text following the selection */
+#ifdef TK_DRAWCHARS_ANGLE
+	Tk_DrawChars(htPtr->display, draw, htPtr->drawGC, htPtr->font,
+		     htPtr->charArr + curPos, nChars - 1,
+		     lastX, y + linePtr->baseline, 0.);
+#else
 	Tk_DrawChars(htPtr->display, draw, htPtr->drawGC, htPtr->font,
 	    htPtr->charArr + curPos, nChars - 1, lastX, y + linePtr->baseline);
+#endif
     }
 }
 
@@ -3055,18 +3086,23 @@ DrawPage(htPtr, deltaY)
 	XFillRectangle(display, pixmap, htPtr->fillGC, 0, 0, width, height);
     }
 
-
-    if (! htPtr->lineArr) return;
-    if (deltaY >= 0) {
+    /* handle null lineArr */
+    if (htPtr->arraySize > 0 && htPtr->nLines > 0) {
+      if (deltaY >= 0) {
 	y += htPtr->lineArr[htPtr->first].offset;
 	lineNum = htPtr->first;
 	lastY = 0;
-    } else {
+      } else {
 	y += htPtr->lineArr[htPtr->last].offset;
 	lineNum = htPtr->last;
 	lastY = height;
+      }
+      forceCopy = 0;
+    } else {
+      htPtr->last = htPtr->first - 1;
+      lineNum = htPtr->first;
+      lastY = 0;
     }
-    forceCopy = 0;
 
     /* Draw each line */
     for (i = htPtr->first; i <= htPtr->last; i++) {
@@ -3365,7 +3401,8 @@ DisplayText(clientData)
      * The page is always draw at full width and the viewport will clip
      * the text.
      */
-    if ((htPtr->first != oldFirst) || (htPtr->last != oldLast)) {
+    if ((htPtr->first != oldFirst) || (htPtr->last != oldLast)
+	|| htPtr->flags & TEXT_DIRTY ) {
 	int offset;
 	int i;
 	int first, last;
@@ -3383,23 +3420,26 @@ DisplayText(clientData)
 	}
         if (! htPtr->lineArr) return;
 
-	for (i = first; i <= last; i++) {
+
+	if (htPtr->arraySize > 0 && htPtr->nLines > 0) {
+	  for (i = first; i <= last; i++) {
 	    offset = htPtr->lineArr[i].offset;
 	    for (linkPtr = Blt_ChainFirstLink(htPtr->lineArr[i].chainPtr);
-		linkPtr != NULL; linkPtr = Blt_ChainNextLink(linkPtr)) {
-		winPtr = Blt_ChainGetValue(linkPtr);
-		if (winPtr->tkwin != NULL) {
-		    MoveEmbeddedWidget(winPtr, offset);
-		    winPtr->flags &= ~WIDGET_VISIBLE;
-		}
+		 linkPtr != NULL; linkPtr = Blt_ChainNextLink(linkPtr)) {
+	      winPtr = Blt_ChainGetValue(linkPtr);
+	      if (winPtr->tkwin != NULL) {
+		MoveEmbeddedWidget(winPtr, offset);
+		winPtr->flags &= ~WIDGET_VISIBLE;
+	      }
 	    }
+	  }
 	}
-    }
-    DrawPage(htPtr, deltaY);
-    SendBogusEvent(tkwin);
+	DrawPage(htPtr, deltaY);
+	SendBogusEvent(tkwin);
 
-    /* Reset flags */
-    htPtr->flags &= ~TEXT_DIRTY;
+	/* Reset flags */
+	htPtr->flags &= ~TEXT_DIRTY;
+    }
 }
 
 /* Selection Procedures */
@@ -3910,7 +3950,7 @@ AppendOp(htPtr, interp, argc, argv)
     HText *htPtr;		/* Hypertext widget */
     Tcl_Interp *interp;		/* Interpreter associated with widget */
     int argc;			/* Number of arguments. */
-    char **argv;		/* Argument strings. */
+    CONST char **argv;		/* Argument strings. */
 {
     Line *linePtr;
     EmbeddedWidget *winPtr;
@@ -3919,7 +3959,7 @@ AppendOp(htPtr, interp, argc, argv)
     if (winPtr == NULL) {
 	return TCL_ERROR;
     }
-    if (Tk_ConfigureWidget(interp, htPtr->tkwin, widgetConfigSpecs,
+    if (Blt_ConfigureWidget(interp, htPtr->tkwin, widgetConfigSpecs,
 	    argc - 3, argv + 3, (char *)winPtr, 0) != TCL_OK) {
 	return TCL_ERROR;
     }
@@ -4054,7 +4094,7 @@ ConfigureOp(htPtr, interp, argc, argv)
     HText *htPtr;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     char *itemPtr;
     Tk_ConfigSpec *specsPtr;
@@ -4089,8 +4129,13 @@ ConfigureOp(htPtr, interp, argc, argv)
 	return Tk_ConfigureInfo(interp, htPtr->tkwin, specsPtr, itemPtr,
 		argv[2], 0);
     }
-    if (Tk_ConfigureWidget(interp, htPtr->tkwin, specsPtr, argc - 2,
-	    argv + 2, itemPtr, TK_CONFIG_ARGV_ONLY) != TCL_OK) {
+    if (Blt_ConfigureWidget(interp, htPtr->tkwin, specsPtr, argc - 2,
+    	    argv + 2, itemPtr, TK_CONFIG_ARGV_ONLY) != TCL_OK) {
+
+      /*
+       * in 8.5 cant tell if in option was modified
+       * supposed to convert to Tk_SetOptions
+       */
 	return TCL_ERROR;
     }
     if (itemPtr == (char *)htPtr) {
@@ -4487,8 +4532,8 @@ TextCmd(clientData, interp, argc, argv)
 #ifdef ITCL_NAMESPACES
     Itk_SetWidgetCommand(htPtr->tkwin, htPtr->cmdToken);
 #endif
-    if ((Tk_ConfigureWidget(interp, htPtr->tkwin, configSpecs, argc - 2,
-		argv + 2, (char *)htPtr, 0) != TCL_OK) ||
+    if ((Blt_ConfigureWidget(interp, htPtr->tkwin, configSpecs, argc - 2,
+		(CONST char **)argv + 2, (char *)htPtr, 0) != TCL_OK) ||
 	(ConfigureText(interp, htPtr) != TCL_OK)) {
 	Tk_DestroyWindow(htPtr->tkwin);
 	return TCL_ERROR;

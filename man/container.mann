@@ -187,7 +187,7 @@ The size of the container window is determined the number of tiers of
 tabs and the sizes of the Tk widgets embedded inside each folder.
 The widest widget determines the width of the folder. The tallest
 determines the height.  If no folders contain an embedded widget, the
-size is detemined solely by the size of the tabs.  
+size is determined solely by the size of the tabs.
 .PP
 You can override either dimension with the container's \fB\-width\fR
 and \fB\-height\fR options.

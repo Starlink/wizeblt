@@ -349,7 +349,7 @@ if test "${blt_cv_found_dbl_epsilon}" = "no" ; then
   old_flags="$CFLAGS"
   CFLAGS="-g -lm"
   AC_MSG_CHECKING([whether DBL_EPSILON can be computed])
-  AC_TRY_RUN_WITH_OUTPUT(blt_cv_dbl_epsilon, [
+  AC_TRY_RUN_WITH_OUTPUT([blt_cv_dbl_epsilon], [
 main () {
     double e, u;
     /* 
@@ -816,6 +816,7 @@ fi
 if test "${TK_INC_DIR}" != "/usr/include" ; then
   INC_SPECS="${INC_SPECS} -I${TK_INC_DIR}"
 fi
+INC_SPECS="${INC_SPECS} -I${TK_SRC_DIR}/generic -I${TK_SRC_DIR}/unix"
 
 # Tcl include files
 #
@@ -825,6 +826,7 @@ if test "${TCL_INC_DIR}" != "/usr/include" -a \
 	"${TCL_INC_DIR}" != "${TK_INC_DIR}" ; then
   INC_SPECS="${INC_SPECS} -I${TCL_INC_DIR}"
 fi
+INC_SPECS="${INC_SPECS} -I${TCL_SRC_DIR}/generic -I${TCL_SRC_DIR}/unix"
 
 
 # On Windows, override the default include directory with our own.
@@ -974,6 +976,13 @@ AC_MSG_RESULT([$blt_cv_minor_version])
 BLT_MINOR_VERSION=${blt_cv_minor_version}
 
 BLT_VERSION=${BLT_MAJOR_VERSION}.${BLT_MINOR_VERSION}
+
+AC_MSG_CHECKING([BLT_PATCH_LEVEL])
+AC_CACHE_VAL(blt_cv_patch_level,
+AC_GREP_SYMBOL(blt_cv_patch_level, BLT_PATCH_LEVEL, ${srcdir}/generic/blt.h)
+)
+AC_MSG_RESULT([$blt_cv_patch_level])
+BLT_PATCH_LEVEL=${blt_cv_patch_level}
 
 # Add BLT to the run path
 libdir=${exec_prefix}/lib
@@ -1384,6 +1393,7 @@ AC_SUBST(INCLUDES)
 AC_SUBST(DEFINES)
 AC_SUBST(BLT_MAJOR_VERSION)
 AC_SUBST(BLT_MINOR_VERSION)
+AC_SUBST(BLT_PATCH_LEVEL)
 AC_SUBST(BLT_VERSION)
 AC_SUBST(AUX_LIBS)
 AC_SUBST(TCL_LIB_DIR)

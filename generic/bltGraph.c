@@ -887,7 +887,7 @@ static Graph *
 CreateGraph(interp, argc, argv, classUid)
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
     Blt_Uid classUid;
 {
     Graph *graphPtr;
@@ -944,7 +944,7 @@ CreateGraph(interp, argc, argv, classUid)
     if (InitPens(graphPtr) != TCL_OK) {
 	goto error;
     }
-    if (Tk_ConfigureWidget(interp, tkwin, configSpecs, argc - 2, argv + 2,
+    if (Blt_ConfigureWidget(interp, tkwin, configSpecs, argc - 2, argv + 2,
 	    (char *)graphPtr, 0) != TCL_OK) {
 	goto error;
     }
@@ -1082,7 +1082,7 @@ ConfigureOp(graphPtr, interp, argc, argv)
     Graph *graphPtr;
     Tcl_Interp *interp;
     int argc;
-    char **argv;
+    CONST char **argv;
 {
     int flags;
 
@@ -1094,7 +1094,7 @@ ConfigureOp(graphPtr, interp, argc, argv)
 	return Tk_ConfigureInfo(interp, graphPtr->tkwin, configSpecs,
 	    (char *)graphPtr, argv[2], flags);
     } else {
-	if (Tk_ConfigureWidget(interp, graphPtr->tkwin, configSpecs, argc - 2,
+	if (Blt_ConfigureWidget(interp, graphPtr->tkwin, configSpecs, argc - 2,
 		argv + 2, (char *)graphPtr, flags) != TCL_OK) {
 	    return TCL_ERROR;
 	}

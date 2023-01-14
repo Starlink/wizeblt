@@ -560,6 +560,11 @@ IconToObj(clientData, interp, tkwin, widgRec, offset)
 }
 
 /*ARGSUSED*/
+
+int
+Blt_TreeViewTextbox(TreeView *tvPtr,
+		    TreeViewEntry *entryPtr,
+		    TreeViewColumn *columnPtr);
 static int
 FreeIcon(clientData, display, widgRec, offset, oldPtr)
     ClientData clientData;
@@ -1595,15 +1600,13 @@ DrawCheckBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y)
     int textX, textY, textHeight;
     int gap, columnWidth, ttlWidth;
     int bool;
-    int borderWidth, relief;
+    /* int borderWidth, relief; */
     TextLayout *textPtr;
     int boxX, boxY, boxWidth, boxHeight;
     TreeViewStyle *csPtr, sRec = *stylePtr;
     int valWidth = (valuePtr->textPtr?valuePtr->width:(icon?TreeViewIconWidth(icon):0));
-    TextLayout *layPtr;
     int showValue;
 
-    layPtr = (tvPtr->hideStyleText?NULL:valuePtr->textPtr);
     showValue = (tvPtr->hideStyleText ? 0 : cbPtr->showValue);
 
     columnPtr = valuePtr->columnPtr;
@@ -1612,13 +1615,13 @@ DrawCheckBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y)
     drawTextBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y, &sRec);
     gc = sRec.gc;
 
-    if (gc != stylePtr->activeGC) {
+    /* if (gc != stylePtr->activeGC) {
         borderWidth = 0;
         relief = TK_RELIEF_FLAT;
     } else {
         borderWidth = 1;
         relief = TK_RELIEF_RAISED;
-    }
+    } */
 
     columnWidth = columnPtr->width - PADDING(columnPtr->pad);
     if (!valuePtr->string) {
@@ -2624,15 +2627,10 @@ DrawBarBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y)
     TreeViewStyle *csPtr, sRec = *stylePtr;
     int valWidth = (valuePtr->textPtr?valuePtr->width:(icon?TreeViewIconWidth(icon):0));
     double curValue;
-    char *string;
     TextStyle ts;
     XColor *color;
-    TextLayout *layPtr;
     int showValue = (tvPtr->hideStyleText ? 0 : cbPtr->showValue);
 
-    layPtr = (tvPtr->hideStyleText?NULL:valuePtr->textPtr);
-
-    string = NULL;
     textPtr = NULL;
     columnPtr = valuePtr->columnPtr;
     csPtr = columnPtr->stylePtr;
@@ -3412,7 +3410,6 @@ DrawWindowBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y)
 {
     TreeViewColumn *columnPtr;
     TreeViewWindowBox *tbPtr = (TreeViewWindowBox *)stylePtr;
-    Tk_Window tkwin;
     int width, height, diff;
     WindowCell *wcPtr;
     TreeViewStyle sRec = *stylePtr;
@@ -3433,7 +3430,6 @@ DrawWindowBox(tvPtr, drawable, entryPtr, valuePtr, stylePtr, icon, x, y)
         int columnWidth = columnPtr->width - 
             (2 * columnPtr->borderWidth + PADDING(columnPtr->pad));
             
-        tkwin = wcPtr->tkwin;
         width = columnWidth;
         height = entryPtr->height-1;
         if ((diff = (y-tvPtr->titleHeight- tvPtr->insetY))<0) {

@@ -8,7 +8,9 @@ namespace eval ::blt {
         }
     }
 
-   initializeLibrary
+    if {[info commands tk] == "tk"} {
+	initializeLibrary
+    }
     
 }
 

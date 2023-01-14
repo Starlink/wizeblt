@@ -516,7 +516,7 @@ GetEntryFromSpecialId(tvPtr, string, entryPtrPtr)
 	    
 	    if ((context == ITEM_ENTRY) || 
 		(context == ITEM_ENTRY_BUTTON) ||
-		((unsigned int)context >= (unsigned int)ITEM_STYLE)) {
+		((uintptr_t)context >= (uintptr_t)ITEM_STYLE)) {
 		entryPtr = Blt_GetCurrentItem(tvPtr->bindTable);
 	    }
 	}
@@ -668,10 +668,8 @@ GetTagInfo(tvPtr, tagName, infoPtr)
 	    hPtr = Blt_FirstHashEntry(tablePtr, &infoPtr->cursor); 
 	    if (hPtr != NULL) {
 		Blt_TreeNode node;
-		int inode;
 
 		node = Blt_GetHashValue(hPtr);
-		inode = node->inode;
 		infoPtr->entryPtr = Blt_NodeToEntry(tvPtr, node);
                 if (infoPtr->entryPtr == NULL && cnt++ == 0) {
                     /* fprintf(stderr, "Dangling node: %d\n", node->inode); */
@@ -1689,13 +1687,11 @@ EntrySetOp(tvPtr, interp, objc, objv)
     TreeViewEntry *entryPtr;
     TreeViewColumn *columnPtr;
     int n, result;
-    Blt_TreeNode node;
     char *left, *string;
 
     if (GetEntryFromObj(tvPtr, objv[3], &entryPtr) != TCL_OK) {
         return TCL_ERROR;
     }
-    node = entryPtr->node;
     string = Tcl_GetString(objv[4]);
     if (Blt_TreeViewGetColumnKey(interp, tvPtr, objv[4], &columnPtr, &left) 
         != TCL_OK || columnPtr == NULL) {
@@ -1777,7 +1773,6 @@ EntryIncrOp(tvPtr, interp, objc, objv)
 {
     TreeViewEntry *entryPtr;
     TreeViewColumn *columnPtr;
-    Blt_TreeNode node;
     double dVal, dIncr = 1.0;
     int iVal, iIncr = 1, isInt = 0;
     Tcl_Obj *objPtr, *valueObjPtr;
@@ -1786,7 +1781,6 @@ EntryIncrOp(tvPtr, interp, objc, objv)
     if (GetEntryFromObj(tvPtr, objv[3], &entryPtr) != TCL_OK) {
         return TCL_ERROR;
     }
-    node = entryPtr->node;
     string = Tcl_GetString(objv[4]);
     if (Blt_TreeViewGetColumnKey(interp, tvPtr, objv[4], &columnPtr, &left) 
         != TCL_OK || columnPtr == NULL) {
@@ -1841,7 +1835,6 @@ EntryGetOp(tvPtr, interp, objc, objv)
     Tcl_Obj *CONST *objv;
 {
     TreeViewEntry *entryPtr;
-    Blt_TreeNode node;
     char *key;
     Tcl_Obj *objPtr;
 
@@ -1877,7 +1870,6 @@ EntryGetOp(tvPtr, interp, objc, objv)
         return TCL_OK;
     }
     key = Tcl_GetString(objv[4]);
-    node = entryPtr->node;
     Tcl_Release(entryPtr);
     if (Blt_TreeGetValue(tvPtr->interp, tvPtr->tree, entryPtr->node, 
         key, &objPtr) != TCL_OK) {
@@ -2656,7 +2648,7 @@ EditOp(tvPtr, interp, objc, objv)
     TreeViewEntry *entryPtr;
     char *string;
     int isRoot, isTest;
-    int x, y, wx, wy;
+    int x, y;
     int rootX, rootY;
 
     Tk_GetRootCoords(tvPtr->tkwin, &rootX, &rootY);
@@ -2693,8 +2685,6 @@ EditOp(tvPtr, interp, objc, objv)
 	(Tcl_GetIntFromObj(interp, objv[3], &y) != TCL_OK)) {
 	return TCL_ERROR;
     }
-    wx = x;
-    wy = y;
     if (isRoot) {
 	x -= rootX;
 	y -= rootY;
@@ -3768,7 +3758,7 @@ FindOp(tvPtr, interp, objc, objv)
     int nMatches, maxMatches, result, length, ocnt, useformat,userow, isvis;
     int depth, maxdepth, mindepth, mask, istree, isleaf, invis, ismap, uselabel;
     int isopen, isclosed, notop, nocase, isfull, cmdLen, docount, optInd, reldepth;
-    int isnull, retLabel, isret, cmdValue;
+    int isnull, retLabel, isret;
     char *colStr, *keysub;
     Tcl_Obj *cmdObj, *cmdArgs;
     Tcl_Obj **aobjv;
@@ -3815,7 +3805,6 @@ FindOp(tvPtr, interp, objc, objv)
     reldepth = notop = 0;
     nocase = 0, isfull = 0, useformat = 0;
     keysub = colStr = NULL;
-    cmdValue = 0;
     curValue = NULL;
     cmdObj = NULL;
     cmdArgs = NULL;
@@ -4663,7 +4652,7 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
     register int i;
     int length, depth = -1, maxdepth = -1, mindepth = -1, noArgs, usefull = 0;
     int result, nocase, uselabel = 0, optInd, ocnt;
-    char *pattern, *curValue;
+    char *curValue;
     Blt_List options;
     TreeViewEntry *entryPtr;
     register Blt_ListNode node;
@@ -4918,7 +4907,6 @@ SearchAndApplyToTree(tvPtr, interp, objc, objv, proc, nonMatchPtr)
 		    != TCL_OK) {
 		    goto error;	/* This shouldn't happen. */
 		}
-		pattern = Blt_ListGetValue(node);
 		objPtr = Tcl_GetObjResult(interp);
 		result = (*compareProc)(interp, Tcl_GetString(objPtr), kPtr, nocase);
 		if (result == invertMatch) {
@@ -5186,16 +5174,16 @@ InsertOp(tvPtr, interp, objc, objv)
     char *string, *subPath;
     int nLen, idx, useid, oLen;
     int sobjc, tobjc;
-    Tcl_Obj *CONST *sobjv;
-    Tcl_Obj *CONST *tobjv;
+    Tcl_Obj **sobjv;
+    Tcl_Obj **tobjv;
     TreeViewStyle *stylePtr;
     TreeViewColumn *columnPtr;
     TreeViewEntry *entryPtr;
     Tcl_DString dStr;
-    int optSkips, i, m, start, nOptions, inode;
+    int optSkips, i, m, start, nOptions/*, inode*/;
 
     useid = -1;
-    inode = -1;
+    /*inode = -1;*/
     optSkips = 0;
     sobjc = 0;
     tobjc = 0;
@@ -5289,7 +5277,7 @@ InsertOp(tvPtr, interp, objc, objv)
         }
 addpath:
         node = NULL;
-        inode = -1;
+        /*inode = -1;*/
 	if (oLen == 5
             && (tvPtr->pathSep == SEPARATOR_NONE || tvPtr->pathSep == NULL)
             && path[0] == '#' && strcmp(path, "#auto") == 0) {
@@ -5420,7 +5408,7 @@ addpath:
 	    goto error;
 	}
 makeent:
-        inode = node->inode;
+        /*inode = node->inode;*/
         if (Blt_TreeViewCreateEntry(tvPtr, node, 0, options, BLT_CONFIG_OBJV_ONLY) != TCL_OK) {
             goto opterror;
         }
