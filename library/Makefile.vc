@@ -24,11 +24,11 @@ miscFiles     = bltCanvEps.pro \
 		tclIndex \
 		$(cursors)
 
-ddFiles =	dd-color.tcl \
-		dd-file.tcl \
-		dd-number.tcl \
-		dd-text.tcl \
-		tclIndex
+#ddFiles =	dd-color.tcl \
+#		dd-file.tcl \
+#		dd-number.tcl \
+#		dd-text.tcl \
+#		tclIndex
 
 instdirs =	$(prefix) $(exec_prefix) $(libdir) \
 		$(scriptdir) $(scriptdir)/dd_protocols $(libdir)/tcl$(v1) \
@@ -44,9 +44,9 @@ install-dirs:
         done
 
 install-ddfiles: install-dirs
-	for i in $(ddFiles) ; do \
-	    $(INSTALL_DATA) $(srcdir)/dd_protocols/$$i $(scriptdir)/dd_protocols ; \
-	done 
+	#for i in $(ddFiles) ; do \
+	#    $(INSTALL_DATA) $(srcdir)/dd_protocols/$$i $(scriptdir)/dd_protocols ; \
+	#done 
 
 install-files: install-dirs
 	for i in $(miscFiles) ; do \

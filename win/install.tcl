@@ -78,7 +78,7 @@ proc Installer::DoInstall { package version } {
 	    -pattern *.pro \
 	    -file tclIndex \
 	    $scriptdir 
-	Add ${srcdir}/library/dd_protocols \
+	#Add ${srcdir}/library/dd_protocols \
 	    -pattern *.tcl \
 	    -file tclIndex \
 	    $scriptdir/dd_protocols

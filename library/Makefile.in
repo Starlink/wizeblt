@@ -34,14 +34,14 @@ miscFiles     = \
 		tclIndex \
 		$(cursors)
 
-ddFiles      =  dd-color.tcl \
-		dd-file.tcl \
-		dd-number.tcl \
-		dd-text.tcl \
-		tclIndex
+#ddFiles      =  dd-color.tcl \
+#		dd-file.tcl \
+#		dd-number.tcl \
+#		dd-text.tcl \
+#		tclIndex
 
 instdirs     =  $(prefix) $(exec_prefix) \
-		$(libdir) $(prefix)/lib $(scriptdir) $(scriptdir)/dd_protocols
+		$(libdir) $(prefix)/lib $(scriptdir) #$(scriptdir)/dd_protocols
 
 all: pkgIndex
 
@@ -53,10 +53,10 @@ pkgIndex:
 
 
 install: mkdirs pkgIndex
-	for i in $(ddFiles) ; do \
-	    $(INSTALL_DATA) $(srcdir)/dd_protocols/$$i \
-			$(INSTALL_ROOT)$(scriptdir)/dd_protocols ; \
-	done 
+	#for i in  ; do \
+	#    $(INSTALL_DATA) $(srcdir)/dd_protocols/$$i \
+	#		$(INSTALL_ROOT)$(scriptdir)/dd_protocols ; \
+	#done 
 	for i in $(miscFiles) ; do \
 	    $(INSTALL_DATA) $(srcdir)/$$i $(INSTALL_ROOT)$(scriptdir) ; \
 	done 
