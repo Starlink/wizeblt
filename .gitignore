@@ -1,5 +1,6 @@
 *.o
 *~
+.*.swp
 *.dSYM
 config.
 config.*
@@ -18,3 +19,4 @@ library/pkgIndex.tcl
 man/*.n
 man/*.3
 Makefile
+/autom4te.cache
