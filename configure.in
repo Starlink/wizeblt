@@ -350,6 +350,8 @@ if test "${blt_cv_found_dbl_epsilon}" = "no" ; then
   CFLAGS="-g -lm"
   AC_MSG_CHECKING([whether DBL_EPSILON can be computed])
   AC_TRY_RUN_WITH_OUTPUT([blt_cv_dbl_epsilon], [
+#include <stdio.h>
+#include <stdlib.h>
 main () {
     double e, u;
     /* 
