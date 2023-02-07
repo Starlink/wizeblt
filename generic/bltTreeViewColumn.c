@@ -1198,10 +1198,10 @@ ColumnConfigChanges(tvPtr, interp, columnPtr)
     Tcl_Interp *interp;
     TreeViewColumn *columnPtr;
 {
-    if (Blt_ObjConfigModified(columnSpecs, interp, "-background", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, interp, "-background", (char*) 0)) {
         columnPtr->hasbg = 1;
     }
-    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-titlebackground", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-titlebackground", (char*) 0)) {
         columnPtr->hasttlbg = 1;
     }
     if (columnPtr->tile != NULL) {
@@ -1209,7 +1209,7 @@ ColumnConfigChanges(tvPtr, interp, columnPtr)
     }
     if (columnPtr->stylePtr == NULL) {
     }
-    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-justify", "-hide", "-weight", "-formatcmd", "-font", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-justify", "-hide", "-weight", "-formatcmd", "-font", (char*) 0)) {
         Blt_TreeViewMakeStyleDirty(tvPtr);
     }
 }
@@ -1265,20 +1265,20 @@ Blt_TreeViewCreateColumn(tvPtr, columnPtr, name, defTitle)
 	DestroyColumn(tvPtr, columnPtr);
 	return TCL_ERROR;
     }
-    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-background", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-background", (char*) 0)) {
         columnPtr->hasbg = 1;
     }
-    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-titlebackground", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-titlebackground", (char*) 0)) {
         columnPtr->hasttlbg = 1;
     }
     if (columnPtr->tile != NULL) {
         Blt_SetTileChangedProc(columnPtr->tile, Blt_TreeViewTileChangedProc, tvPtr);
     }
-    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-*font", "-foreground", "-titleborderwidth", "-titlerelief", "-titleshadow", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-*font", "-foreground", "-titleborderwidth", "-titlerelief", "-titleshadow", (char*) 0)) {
         Blt_TreeViewMakeStyleDirty(tvPtr);
     }
     ColumnConfigChanges(tvPtr, interp, columnPtr);
-    Blt_ObjConfigModified(columnSpecs, tvPtr->interp, 0);
+    Blt_ObjConfigModified(columnSpecs, tvPtr->interp, (char*) 0);
     return TCL_OK;
     
 }
@@ -1327,7 +1327,7 @@ CreateColumn(tvPtr, nameObjPtr, objc, objv)
 	DestroyColumn(tvPtr, columnPtr);
 	return NULL;
     }
-    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-background", 0)) {
+    if (Blt_ObjConfigModified(columnSpecs, tvPtr->interp, "-background", (char*) 0)) {
         columnPtr->hasbg = 1;
     }
     if (columnPtr->tile != NULL) {

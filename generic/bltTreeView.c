@@ -2120,7 +2120,7 @@ Blt_TreeViewConfigureEntry(
         }
     }
     tvPtr->flags |= (TV_LAYOUT | TV_DIRTY | TV_RESORT);
-    Blt_ObjConfigModified(bltTreeViewEntrySpecs, tvPtr->interp, 0);
+    Blt_ObjConfigModified(bltTreeViewEntrySpecs, tvPtr->interp, (char*) 0);
     return TCL_OK;
 }
 
@@ -4110,7 +4110,7 @@ Blt_TreeViewUpdateWidget(Tcl_Interp *interp, TreeView *tvPtr)
 	(char *)NULL)) {
 	Blt_TreeViewUpdateColumnGCs(tvPtr, &tvPtr->treeColumn);
     }
-    Blt_ObjConfigModified(bltTreeViewSpecs, interp, 0);
+    Blt_ObjConfigModified(bltTreeViewSpecs, interp, (char*) 0);
     Blt_TreeViewEventuallyRedraw(tvPtr);
     return TCL_OK;
 }
